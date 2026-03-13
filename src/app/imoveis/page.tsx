@@ -330,7 +330,7 @@ export default function ImoveisPage() {
       const ghlFields = mapPropertyToGhlFields(prop.data);
       const body = prop.isNew
         ? { contactId, fields: ghlFields }
-        : { recordId: contactId, fields: ghlFields };
+        : { recordId: prop.id, fields: ghlFields };
 
       const res = await fetch('/api/properties', {
         method,
