@@ -44,19 +44,32 @@ export async function getPropertiesForContact(contactId: string) {
 // GHL custom objects expect properties as an array of { key, value } pairs
 // key format: custom_objects.<objectKey>.<fieldKey>
 function toPropertiesArray(fields: Record<string, unknown>, objectKey: string) {
+  const aliases: Record<string, string> =
+    objectKey === 'imveis'
+      ? {
+          // Custom Object "Imóveis" schema keys differ from our UI keys.
+          pretensao_do_negocio: 'escolha_a_pretensao_do_negocio',
+          tipo_do_imovel: 'tipo_de_imovel',
+          categoria: 'categoria_do_imovel',
+          endereco: 'endereco_do_imovel',
+        }
+      : {};
+
   return Object.entries(fields)
     .filter(([, v]) => v !== '' && v !== null && v !== undefined)
     .map(([key, value]) => ({
-      key: `custom_objects.${objectKey}.${key}`,
+      key: `custom_objects.${objectKey}.${(aliases[key] ?? key)}`,
       value: Array.isArray(value) ? value.join(', ') : String(value),
     }));
 }
 
 export async function createProperty(contactId: string, fields: Record<string, unknown>) {
   const fieldKeys = Object.keys(fields);
+  const properties = toPropertiesArray(fields, OBJECT_KEY);
+  const sentKeys = properties.map((p) => p.key);
   const body = {
     locationId: LOCATION_ID,
-    properties: toPropertiesArray(fields, OBJECT_KEY),
+    properties,
     associations: [
       { objectType: 'contact', objectId: contactId }
     ],
@@ -72,7 +85,11 @@ export async function createProperty(contactId: string, fields: Record<string, u
 
   const text = await res.text();
   log('createProperty', res.status, text);
-  if (!res.ok) throw new Error(`Failed to create (${res.status}) keys=${JSON.stringify(fieldKeys)}: ${text}`);
+  if (!res.ok) {
+    throw new Error(
+      `Failed to create (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)}: ${text}`
+    );
+  }
 
   let created: Record<string, unknown> = {};
   try { created = JSON.parse(text); } catch { /* empty */ }
@@ -90,8 +107,10 @@ export async function createProperty(contactId: string, fields: Record<string, u
 
 export async function updateProperty(recordId: string, fields: Record<string, unknown>) {
   const fieldKeys = Object.keys(fields);
+  const properties = toPropertiesArray(fields, OBJECT_KEY);
+  const sentKeys = properties.map((p) => p.key);
   const body = {
-    properties: toPropertiesArray(fields, OBJECT_KEY),
+    properties,
   };
 
   const res = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`, {
@@ -102,7 +121,11 @@ export async function updateProperty(recordId: string, fields: Record<string, un
 
   const text = await res.text();
   log('updateProperty', res.status, text);
-  if (!res.ok) throw new Error(`Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)}: ${text}`);
+  if (!res.ok) {
+    throw new Error(
+      `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)}: ${text}`
+    );
+  }
   try { return JSON.parse(text); } catch { return {}; }
 }
 
