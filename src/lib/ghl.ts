@@ -31,7 +31,11 @@ function getStringField(obj: Record<string, unknown>, key: string): string | und
 
 function getObjectId(): string {
   const objectId = process.env.GHL_OBJECT_ID;
-  if (!objectId) throw new Error('Missing env var: GHL_OBJECT_ID');
+  if (!objectId) {
+    throw new Error(
+      'Missing env var: GHL_OBJECT_ID (set it in .env.local / deployment env vars and restart the server)'
+    );
+  }
   return objectId;
 }
 
