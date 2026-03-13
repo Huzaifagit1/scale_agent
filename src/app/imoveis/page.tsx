@@ -63,23 +63,19 @@ function mapCustomFieldsToProperty(customFields: Array<{ id: string; value: stri
 
 function mapPropertyToGhlFields(data: PropertyData): Record<string, string> {
   const result: Record<string, string> = {};
-  
-  // Build a map of field key -> ghlId
-  const keyToGhlId: Record<string, string> = {};
+
+  const allowedKeys = new Set<string>();
   for (const section of FORM_SECTIONS) {
-    for (const field of section.fields) {
-      keyToGhlId[field.key] = field.ghlId;
-    }
+    for (const field of section.fields) allowedKeys.add(field.key);
   }
-  
-  // Map property data keys to GHL field IDs
+
+  // For custom-object records, the API expects keys that match the object's field keys
+  // (we send plain keys and the server prefixes them as `custom_objects.<objectKey>.<fieldKey>`).
   for (const [key, value] of Object.entries(data)) {
-    const ghlId = keyToGhlId[key];
-    if (ghlId && value) {
-      result[ghlId] = String(value);
-    }
+    if (!allowedKeys.has(key) || !value) continue;
+    result[key] = String(value);
   }
-  
+
   return result;
 }
 

@@ -53,6 +53,7 @@ function toPropertiesArray(fields: Record<string, unknown>, objectKey: string) {
 }
 
 export async function createProperty(contactId: string, fields: Record<string, unknown>) {
+  const fieldKeys = Object.keys(fields);
   const body = {
     locationId: LOCATION_ID,
     properties: toPropertiesArray(fields, OBJECT_KEY),
@@ -71,7 +72,7 @@ export async function createProperty(contactId: string, fields: Record<string, u
 
   const text = await res.text();
   log('createProperty', res.status, text);
-  if (!res.ok) throw new Error(`Failed to create (${res.status}): ${text}`);
+  if (!res.ok) throw new Error(`Failed to create (${res.status}) keys=${JSON.stringify(fieldKeys)}: ${text}`);
 
   let created: Record<string, unknown> = {};
   try { created = JSON.parse(text); } catch { /* empty */ }
@@ -88,6 +89,7 @@ export async function createProperty(contactId: string, fields: Record<string, u
 }
 
 export async function updateProperty(recordId: string, fields: Record<string, unknown>) {
+  const fieldKeys = Object.keys(fields);
   const body = {
     properties: toPropertiesArray(fields, OBJECT_KEY),
   };
@@ -100,7 +102,7 @@ export async function updateProperty(recordId: string, fields: Record<string, un
 
   const text = await res.text();
   log('updateProperty', res.status, text);
-  if (!res.ok) throw new Error(`Failed to update (${res.status}): ${text}`);
+  if (!res.ok) throw new Error(`Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)}: ${text}`);
   try { return JSON.parse(text); } catch { return {}; }
 }
 
