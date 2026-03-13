@@ -24,9 +24,10 @@ npm install
 ### 2. Environment Variables
 Create a `.env.local` file:
 ```env
-GHL_API_KEY=your_private_integration_token
+GHL_API_TOKEN=your_private_integration_token
 GHL_LOCATION_ID=xWbTcKk2acWXn4MbANTk
 GHL_OBJECT_ID=698794a0e95e971b723a93fb
+GHL_OBJECT_KEY=imveis
 ```
 
 ### 3. Run locally
@@ -42,9 +43,10 @@ npm run dev
 1. Push this folder to a GitHub repository
 2. Go to [vercel.com](https://vercel.com) → New Project → Import your repo
 3. In **Environment Variables**, add:
-   - `GHL_API_KEY` = your private token
+   - `GHL_API_TOKEN` = your private token
    - `GHL_LOCATION_ID` = `xWbTcKk2acWXn4MbANTk`
    - `GHL_OBJECT_ID` = `698794a0e95e971b723a93fb`
+   - `GHL_OBJECT_KEY` = `imveis`
 4. Deploy — Vercel gives you a URL like `https://imoveis-xyz.vercel.app`
 
 ---
@@ -64,10 +66,11 @@ That `{{contact.id}}` is the GHL merge tag for the contact's ID.
 
 The app uses these GHL API endpoints:
 - `GET /contacts/:id` — load contact name
-- `GET /objects/:objectId/records?associatedContactId=:id` — load existing properties
+- `GET /associations/relations/:contactId?locationId=...` — list linked property record IDs
+- `GET /objects/:objectId/records/:recordId` — load a property record
 - `POST /objects/:objectId/records` — create new property
-- `PUT /objects/:objectId/records/:id` — update existing property
-- `POST /objects/:objectId/records/:id/associations` — link property to contact
+- `PUT /objects/:objectId/records/:recordId` — update existing property
+- `POST /associations/relations` — link property record to contact
 
 If the association endpoint structure differs in your GHL version, check:
 **Settings → Custom Objects → Imóveis → Associations** for the exact label key.

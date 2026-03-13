@@ -61,8 +61,8 @@ function mapCustomFieldsToProperty(customFields: Array<{ id: string; value: stri
   return data;
 }
 
-function mapPropertyToGhlFields(data: PropertyData): Record<string, string> {
-  const result: Record<string, string> = {};
+function mapPropertyToGhlFields(data: PropertyData): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
 
   const allowedKeys = new Set<string>();
   for (const section of FORM_SECTIONS) {
@@ -73,7 +73,7 @@ function mapPropertyToGhlFields(data: PropertyData): Record<string, string> {
   // (we send plain keys and the server prefixes them as `custom_objects.<objectKey>.<fieldKey>`).
   for (const [key, value] of Object.entries(data)) {
     if (!allowedKeys.has(key) || !value) continue;
-    result[key] = String(value);
+    result[key] = Array.isArray(value) ? value : String(value);
   }
 
   return result;
