@@ -9,6 +9,15 @@ const headers = () => ({
   'Version': '2021-07-28',
 });
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getStringField(obj: Record<string, unknown>, key: string): string | undefined {
+  const value = obj[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
 function log(label: string, status: number, body: string) {
   console.log(`[GHL:${label}] ${status}`, body.slice(0, 500));
 }
@@ -68,7 +77,9 @@ export async function createProperty(contactId: string, fields: Record<string, u
   try { created = JSON.parse(text); } catch { /* empty */ }
 
   // Attempt explicit association as fallback
-  const recordId = (created.id || created.record?.id) as string | undefined;
+  const recordId =
+    getStringField(created, 'id') ??
+    (isObject(created['record']) ? getStringField(created['record'], 'id') : undefined);
   if (recordId) {
     await associateToContact(recordId, contactId);
   }
