@@ -144,29 +144,28 @@ function toPropertiesObject(fields: Record<string, unknown>) {
     if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
 
     const schemaSuffix = aliases[uiKey] ?? uiKey;
-    const fieldKey = `${OBJECT_OBJECT_KEY}.${schemaSuffix}`;
     const type = FIELD_TYPE_BY_KEY[uiKey];
 
     if (type === 'MONETORY') {
       const num = parseLooseNumber(rawValue);
       if (num === undefined) continue;
-      out[fieldKey] = { currency: 'default', value: num };
+      out[schemaSuffix] = { currency: 'default', value: num };
       continue;
     }
 
     if (type === 'NUMERICAL') {
       const num = parseLooseNumber(rawValue);
       if (num === undefined) continue;
-      out[fieldKey] = num;
+      out[schemaSuffix] = num;
       continue;
     }
 
     if (Array.isArray(rawValue)) {
-      out[fieldKey] = rawValue.map(String);
+      out[schemaSuffix] = rawValue.map(String);
       continue;
     }
 
-    out[fieldKey] = String(rawValue);
+    out[schemaSuffix] = String(rawValue);
   }
 
   return out;
