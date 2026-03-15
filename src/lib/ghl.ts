@@ -332,34 +332,63 @@ function mapCustomObjectToUi(
 
 async function toPropertiesObject(fields: Record<string, unknown>) {
   const fieldMap = await getFieldMap();
-  // Complete verified mapping: UI key → real GHL custom object field suffix
-  // Generated from actual fields.json schema - do not guess these
-  const fallbackAliases: Record<string, string> = {
-    pretensao_do_negocio:                  'escolha_a_pretensao_do_negocio',
-    tipo_do_imovel:                        'tipo_de_imovel',
-    categoria:                             'categoria_do_imovel',
-    situacao:                              'situacao_da_disponibilidade_atualizacao',
-    referencia:                            'referencia_do_imovel',
-    endereco:                              'endereco_do_imovel',
-    numero:                                'numero_do_endereco_do_imovel',
-    complemento:                           'complemento_de_endereco',
-    bairro_oficial:                        'bairro_oficial_endereco',
-    regiao:                                'regiao_endereco',
-    quadra:                                'quadra_endereco',
-    lote:                                  'lote_endereco',
-    ponto_de_referencia:                   'ponto_de_referencia_endereco',
-    numero_de_dormitorios:                 'numero_de_dormitorios',
+  // HARDCODED verified mapping from real fields.json schema.
+  // This takes HIGHEST priority — overrides the auto-mapper cache which may be stale.
+  const HARDCODED: Record<string, string> = {
+    escolha_a_pretensao_do_negocio:        'escolha_a_pretensao_do_negocio',
+    tipo_de_imovel:                        'tipo_de_imovel',
+    categoria_do_imovel:                   'categoria_do_imovel',
+    situacao_da_disponibilidade_atualizacao: 'situacao_da_disponibilidade_atualizacao',
+    referencia_do_imovel:                  'referencia_do_imovel',
+    endereco_do_imovel:                    'endereco_do_imovel',
+    numero_do_endereco_do_imovel:          'numero_do_endereco_do_imovel',
+    complemento_de_endereco:               'complemento_de_endereco',
+    bairro_oficial_endereco:               'bairro_oficial_endereco',
+    regiao_endereco:                       'regiao_endereco',
+    quadra_endereco:                       'quadra_endereco',
+    lote_endereco:                         'lote_endereco',
+    ponto_de_referencia_endereco:          'ponto_de_referencia_endereco',
+    // fields that are the same in both UI and GHL (no alias needed, listed for clarity)
+    cep:                    'cep',
+    cidade_endereco:        'cidade_endereco',
+    uf_endereco:            'uf_endereco',
+    pais_endereco:          'pais_endereco',
+    bairro_commercial:      'bairro_commercial',
+    numero_de_dormitorios:  'numero_de_dormitorios',
+    numero_de_suites:       'numero_de_suites',
+    numero_de_banheiros:    'numero_de_banheiros',
+    numero_de_salas:        'numero_de_salas',
+    numero_de_vagas_garagens_cobertas:         'numero_de_vagas_garagens_cobertas',
+    numero_de_vagas_de_garagens_descobertas:   'numero_de_vagas_de_garagens_descobertas',
+    numero_de_elevadores:   'numero_de_elevadores',
+    numero_de_andares:      'numero_de_andares',
+    area_privativa:         'area_privativa',
+    area_total:             'area_total',
+    area_construida:        'area_construida',
+    area_dimensao_terreno:  'area_dimensao_terreno',
+    area_util:              'area_util',
+    valor_de_venda:         'valor_de_venda',
+    valor_de_locacao:       'valor_de_locacao',
+    valor_do_condominio:    'valor_do_condominio',
+    valor_do_iptu:          'valor_do_iptu',
+    permuta:                'permuta',
+    finalidade:             'finalidade',
+    descricao_do_imovel:    'descricao_do_imovel',
   };
+  // Legacy fallback aliases (kept for any unmapped keys)
+  const fallbackAliases: Record<string, string> = {};
 
   const out: Record<string, unknown> = {};
   for (const [uiKey, rawValue] of Object.entries(fields)) {
     if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
 
     const normalizedUi = normalizeLabel(uiKey);
+    // HARDCODED takes priority over the cached auto-mapper (which may have stale/wrong mappings)
     const schemaSuffix =
+      HARDCODED[uiKey] ??
+      fallbackAliases[uiKey] ??
       fieldMap.uiToSuffix[uiKey] ??
       fieldMap.customNameToSuffix[normalizedUi] ??
-      fallbackAliases[uiKey] ??
       uiKey;
 
     const type = FIELD_TYPE_BY_KEY[uiKey] ?? fieldMap.customTypeBySuffix[schemaSuffix] ?? 'TEXT';
