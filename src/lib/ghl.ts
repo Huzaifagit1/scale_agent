@@ -484,17 +484,18 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
   const sentKeys = Object.keys(properties);
-  // GHL PUT: must use object ID in URL (not key) + locationId in body
-  // Confirmed via diagnostics: key in URL → always 400, ID in URL → passes validation
+  // GHL PUT (confirmed working format):
+  // - Object ID in URL (not key)
+  // - locationId as QUERY PARAM (NOT in body — GHL rejects it if in body)
+  // - Properties as flat object with short keys (no custom_objects.imveis. prefix)
   const objectId = getObjectId();
-  const body = { locationId: LOCATION_ID, properties };
-  const url = `${GHL_BASE}/objects/${objectId}/records/${recordId}`;
+  const url = `${GHL_BASE}/objects/${objectId}/records/${recordId}?locationId=${LOCATION_ID}`;
   console.log('[GHL:updateProperty] PUT', url, 'sentKeys:', sentKeys);
 
   const res = await fetch(url, {
     method: 'PUT',
     headers: headers(),
-    body: JSON.stringify(body),
+    body: JSON.stringify({ properties }),
   });
 
   const text = await res.text();
@@ -508,11 +509,11 @@ export async function updateProperty(recordId: string, fields: Record<string, un
 }
 
 export async function deleteProperty(recordId: string) {
-  // DELETE also requires the object KEY not the numeric ID
-  const res = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`, {
-    method: 'DELETE',
-    headers: headers(),
-  });
+  // DELETE: object ID in URL + locationId as query param (same pattern as PUT)
+  const res = await fetch(
+    `${GHL_BASE}/objects/${getObjectId()}/records/${recordId}?locationId=${LOCATION_ID}`,
+    { method: 'DELETE', headers: headers() }
+  );
   const text = await res.text();
   log('deleteProperty', res.status, text);
   if (!res.ok) {
