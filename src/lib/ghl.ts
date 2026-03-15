@@ -451,7 +451,8 @@ export async function updateProperty(recordId: string, fields: Record<string, un
     properties,
   };
 
-  const res = await fetch(`${GHL_BASE}/objects/${getObjectId()}/records/${recordId}`, {
+  // GHL PUT requires the object KEY not the numeric ID (POST accepts ID but PUT returns 404 with ID)
+  const res = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`, {
     method: 'PUT',
     headers: headers(),
     body: JSON.stringify(body),
@@ -468,7 +469,8 @@ export async function updateProperty(recordId: string, fields: Record<string, un
 }
 
 export async function deleteProperty(recordId: string) {
-  const res = await fetch(`${GHL_BASE}/objects/${getObjectId()}/records/${recordId}`, {
+  // DELETE also requires the object KEY not the numeric ID
+  const res = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`, {
     method: 'DELETE',
     headers: headers(),
   });
