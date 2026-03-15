@@ -425,23 +425,27 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     }
 
     if (type === 'CHECKBOX') {
-      if (Array.isArray(rawValue)) {
-        if (optionMap) {
-          out[schemaSuffix] = rawValue
-            .map((v) => {
-              const labelKey = normalizeLabel(String(v));
-              return optionMap[labelKey] ?? v;
-            })
-            .map(String);
-        } else {
-          out[schemaSuffix] = rawValue.map(String);
+      const toArray = (value: unknown) => {
+        if (Array.isArray(value)) return value.map(String);
+        const str = String(value ?? '').trim();
+        if (!str) return [];
+        if (str.includes(',') || str.includes(';') || str.includes('|')) {
+          return str.split(/[,;|]/g).map((s) => s.trim()).filter(Boolean);
         }
-        continue;
-      }
+        return [str];
+      };
 
-      const labelKey = normalizeLabel(String(rawValue));
-      const mapped = optionMap ? optionMap[labelKey] ?? String(rawValue) : String(rawValue);
-      out[schemaSuffix] = [String(mapped)];
+      const values = toArray(rawValue);
+      if (optionMap) {
+        out[schemaSuffix] = values
+          .map((v) => {
+            const labelKey = normalizeLabel(String(v));
+            return optionMap[labelKey] ?? v;
+          })
+          .map(String);
+      } else {
+        out[schemaSuffix] = values.map(String);
+      }
       continue;
     }
 
