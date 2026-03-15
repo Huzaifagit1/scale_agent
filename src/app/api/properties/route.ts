@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { recordId, fields } = body;
+    const { recordId, fields, contactId } = body;
     if (!recordId || !fields) return NextResponse.json({ error: 'Missing data' }, { status: 400 });
 
     const normalizedFields = normalizeIncomingFields(fields);
@@ -53,8 +53,17 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
     }
 
-    const result = await updateProperty(recordId, normalizedFields);
-    return NextResponse.json({ success: true, result });
+    try {
+      const result = await updateProperty(recordId, normalizedFields);
+      return NextResponse.json({ success: true, result });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      if (msg.includes('(404)') && contactId) {
+        const created = await createProperty(contactId, normalizedFields);
+        return NextResponse.json({ success: true, result: created, upserted: true });
+      }
+      throw e;
+    }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
