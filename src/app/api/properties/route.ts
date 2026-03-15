@@ -61,23 +61,31 @@ export async function PUT(req: NextRequest) {
       if (msg.includes('(404)') && contactId) {
         const candidates = await getPropertiesForContact(contactId);
         const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase();
-        const targetRef = normalize((normalizedFields as any).referencia);
-        const targetAddress = normalize((normalizedFields as any).endereco);
-        const targetCity = normalize((normalizedFields as any).cidade_endereco);
-        const targetCep = normalize((normalizedFields as any).cep);
+        const pick = (obj: any, keys: string[]) => {
+          for (const key of keys) {
+            const val = obj?.[key];
+            if (val !== undefined && val !== null && String(val).trim() !== '') return normalize(val);
+          }
+          return '';
+        };
+
+        const targetRef = pick(normalizedFields, ['referencia', 'referncia']);
+        const targetAddress = pick(normalizedFields, ['endereco', 'endereco_do_imovel']);
+        const targetCity = pick(normalizedFields, ['cidade_endereco']);
+        const targetCep = pick(normalizedFields, ['cep']);
 
         const match = candidates.find((rec: any) => {
           const props = rec?.properties ?? rec ?? {};
-          const refMatch = targetRef && normalize(props.referencia) === targetRef;
+          const refMatch = targetRef && pick(props, ['referencia', 'referncia']) === targetRef;
           if (refMatch) return true;
           const addrMatch =
             targetAddress &&
             targetCity &&
-            normalize(props.endereco) === targetAddress &&
-            normalize(props.cidade_endereco) === targetCity;
+            pick(props, ['endereco', 'endereco_do_imovel']) === targetAddress &&
+            pick(props, ['cidade_endereco']) === targetCity;
           if (addrMatch) return true;
-          const cepMatch = targetCep && normalize(props.cep) === targetCep;
-          return cepMatch && targetCity && normalize(props.cidade_endereco) === targetCity;
+          const cepMatch = targetCep && pick(props, ['cep']) === targetCep;
+          return cepMatch && targetCity && pick(props, ['cidade_endereco']) === targetCity;
         });
 
         if (match?.id) {
