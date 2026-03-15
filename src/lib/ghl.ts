@@ -33,6 +33,7 @@ type FieldMap = {
   customNameToSuffix: Record<string, string>;
   customTypeBySuffix: Record<string, string>;
   optionLabelToKeyBySuffix: Record<string, Record<string, string>>;
+  optionKeyToLabelBySuffix: Record<string, Record<string, string>>;
 };
 
 let fieldMapPromise: Promise<FieldMap> | null = null;
@@ -119,31 +120,33 @@ async function getFieldMap(): Promise<FieldMap> {
       );
       const text = await res.text();
       log('getCustomObjectFields', res.status, text);
-      if (!res.ok) {
-        return {
-          uiToSuffix: {},
-          suffixToUi: {},
-          optionLabelToKeyByUi: {},
-          customNameToSuffix: {},
-          customTypeBySuffix: {},
-          optionLabelToKeyBySuffix: {},
-        };
-      }
+  if (!res.ok) {
+    return {
+      uiToSuffix: {},
+      suffixToUi: {},
+      optionLabelToKeyByUi: {},
+      customNameToSuffix: {},
+      customTypeBySuffix: {},
+      optionLabelToKeyBySuffix: {},
+      optionKeyToLabelBySuffix: {},
+    };
+  }
 
       let fields: Array<{ fieldKey?: string; name?: string }> = [];
       try {
         const data = JSON.parse(text);
         fields = Array.isArray(data?.fields) ? data.fields : [];
-      } catch {
-        return {
-          uiToSuffix: {},
-          suffixToUi: {},
-          optionLabelToKeyByUi: {},
-          customNameToSuffix: {},
-          customTypeBySuffix: {},
-          optionLabelToKeyBySuffix: {},
-        };
-      }
+  } catch {
+    return {
+      uiToSuffix: {},
+      suffixToUi: {},
+      optionLabelToKeyByUi: {},
+      customNameToSuffix: {},
+      customTypeBySuffix: {},
+      optionLabelToKeyBySuffix: {},
+      optionKeyToLabelBySuffix: {},
+    };
+  }
 
       const uiToSuffix: Record<string, string> = {};
       const suffixToUi: Record<string, string> = {};
@@ -151,6 +154,7 @@ async function getFieldMap(): Promise<FieldMap> {
       const customNameToSuffix: Record<string, string> = {};
       const customTypeBySuffix: Record<string, string> = {};
       const optionLabelToKeyBySuffix: Record<string, Record<string, string>> = {};
+      const optionKeyToLabelBySuffix: Record<string, Record<string, string>> = {};
 
       for (const field of fields) {
         if (!field?.fieldKey) continue;
@@ -167,12 +171,15 @@ async function getFieldMap(): Promise<FieldMap> {
           if (Array.isArray((field as any).options)) {
             const options = (field as any).options as Array<{ key?: string; label?: string }>;
             const map: Record<string, string> = {};
+            const reverse: Record<string, string> = {};
             for (const opt of options) {
               if (!opt?.key || !opt?.label) continue;
               map[normalizeLabel(opt.label)] = opt.key;
+              reverse[String(opt.key)] = String(opt.label);
             }
             optionLabelToKeyByUi[suffix] = map;
             optionLabelToKeyBySuffix[suffix] = map;
+            optionKeyToLabelBySuffix[suffix] = reverse;
           }
           continue;
         }
@@ -195,13 +202,16 @@ async function getFieldMap(): Promise<FieldMap> {
           if (Array.isArray((field as any).options)) {
             const options = (field as any).options as Array<{ key?: string; label?: string }>;
             const map: Record<string, string> = {};
+            const reverse: Record<string, string> = {};
             for (const opt of options) {
               if (!opt?.key || !opt?.label) continue;
               map[normalizeLabel(opt.label)] = opt.key;
+              reverse[String(opt.key)] = String(opt.label);
             }
             const uiKeyForOptions = suffixToUi[suffix];
             if (uiKeyForOptions) optionLabelToKeyByUi[uiKeyForOptions] = map;
             optionLabelToKeyBySuffix[suffix] = map;
+            optionKeyToLabelBySuffix[suffix] = reverse;
           }
         }
       }
@@ -213,6 +223,7 @@ async function getFieldMap(): Promise<FieldMap> {
         customNameToSuffix,
         customTypeBySuffix,
         optionLabelToKeyBySuffix,
+        optionKeyToLabelBySuffix,
       };
     })();
   }
@@ -299,7 +310,11 @@ export async function getPropertiesForContact(contactId: string) {
         const data = JSON.parse(text);
         const record = data.record || data;
         if (record?.properties && typeof record.properties === 'object') {
-          record.properties = mapCustomObjectToUi(record.properties, fieldMap.suffixToUi);
+          record.properties = mapCustomObjectToUi(
+            record.properties,
+            fieldMap.suffixToUi,
+            fieldMap.optionKeyToLabelBySuffix
+          );
         }
         return record;
       } catch {
@@ -313,7 +328,8 @@ export async function getPropertiesForContact(contactId: string) {
 
 function mapCustomObjectToUi(
   properties: Record<string, unknown>,
-  suffixToUi: Record<string, string>
+  suffixToUi: Record<string, string>,
+  optionKeyToLabelBySuffix: Record<string, Record<string, string>>
 ) {
   const out: Record<string, unknown> = {};
   for (const [suffix, rawValue] of Object.entries(properties)) {
@@ -323,6 +339,24 @@ function mapCustomObjectToUi(
     if (isObject(rawValue) && typeof rawValue.value === 'number') {
       out[uiKey] = String(rawValue.value);
       continue;
+    }
+
+    if (Array.isArray(rawValue)) {
+      const map = optionKeyToLabelBySuffix[suffix];
+      if (map) {
+        out[uiKey] = rawValue.map((v) => map[String(v)] ?? String(v));
+      } else {
+        out[uiKey] = rawValue;
+      }
+      continue;
+    }
+
+    if (typeof rawValue === 'string') {
+      const map = optionKeyToLabelBySuffix[suffix];
+      if (map && map[rawValue]) {
+        out[uiKey] = map[rawValue];
+        continue;
+      }
     }
 
     out[uiKey] = rawValue as unknown;
