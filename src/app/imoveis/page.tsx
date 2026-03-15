@@ -270,18 +270,37 @@ export default function ImoveisPage() {
           data: (rec.properties || rec) as PropertyData,
         }));
         
-        // Load legacy contact customFields only when no custom object records exist
-        if (loaded.length === 0 && data.contact?.customFields?.length > 0) {
+        // Load legacy contact customFields, but avoid duplicating an existing property
+        if (data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
           if (Object.keys(customFieldsData).length > 0) {
-            loaded = [{
-              id: undefined,
-              isNew: true,
-              isOpen: true,
-              isSaving: false,
-              isDirty: true,
-              data: customFieldsData,
-            }];
+            const normalize = (v?: string | string[]) =>
+              String(Array.isArray(v) ? v.join(' ') : v || '').trim().toLowerCase();
+            const legacySig = [
+              normalize(customFieldsData['referencia']),
+              normalize(customFieldsData['endereco']),
+              normalize(customFieldsData['cidade_endereco']),
+            ].join('|');
+
+            const hasDuplicate = loaded.some((p) => {
+              const sig = [
+                normalize(p.data['referencia']),
+                normalize(p.data['endereco']),
+                normalize(p.data['cidade_endereco']),
+              ].join('|');
+              return sig !== '||' && sig === legacySig;
+            });
+
+            if (!hasDuplicate) {
+              loaded = [{
+                id: undefined,
+                isNew: true,
+                isOpen: true,
+                isSaving: false,
+                isDirty: true,
+                data: customFieldsData,
+              }, ...loaded];
+            }
           }
         }
         
