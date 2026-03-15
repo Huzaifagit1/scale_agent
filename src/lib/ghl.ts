@@ -484,9 +484,11 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
   const sentKeys = Object.keys(properties);
-  // GHL PUT requires: object KEY in URL (not ID) + locationId in body
+  // GHL PUT: must use object ID in URL (not key) + locationId in body
+  // Confirmed via diagnostics: key in URL → always 400, ID in URL → passes validation
+  const objectId = getObjectId();
   const body = { locationId: LOCATION_ID, properties };
-  const url = `${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`;
+  const url = `${GHL_BASE}/objects/${objectId}/records/${recordId}`;
   console.log('[GHL:updateProperty] PUT', url, 'sentKeys:', sentKeys);
 
   const res = await fetch(url, {
