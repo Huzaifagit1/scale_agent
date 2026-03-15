@@ -17,40 +17,21 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: 'Missing env vars' }, { status: 500 });
   }
 
-  const results: Record<string, unknown> = {
-    env: { locationId: LOCATION_ID, objectId: OBJECT_ID, objectKey: OBJECT_KEY }
-  };
-
-  // Get a real record ID
+  // Just verify env + confirm record count. No destructive tests.
   const searchRes = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/search`, {
     method: 'POST', headers: headers(),
     body: JSON.stringify({ locationId: LOCATION_ID, page: 1, pageLimit: 1 }),
   });
   const searchData = await searchRes.json();
-  const rid = searchData?.records?.[0]?.id;
-  results.testRecordId = rid ?? 'none';
-  if (!rid) return NextResponse.json({ ...results, error: 'No records to test with' });
 
-  // Test DELETE with locationId as query param
-  const r1 = await fetch(
-    `${GHL_BASE}/objects/${OBJECT_ID}/records/${rid}?locationId=${LOCATION_ID}`,
-    { method: 'DELETE', headers: headers() }
-  );
-  results.testDELETE_objectId_queryParam = { status: r1.status, body: (await r1.text()).slice(0, 500) };
-
-  // Test DELETE with object KEY + query param
-  const r2 = await fetch(
-    `${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}?locationId=${LOCATION_ID}`,
-    { method: 'DELETE', headers: headers() }
-  );
-  results.testDELETE_objectKey_queryParam = { status: r2.status, body: (await r2.text()).slice(0, 500) };
-
-  // Test DELETE with no locationId
-  const r3 = await fetch(
-    `${GHL_BASE}/objects/${OBJECT_ID}/records/${rid}`,
-    { method: 'DELETE', headers: headers() }
-  );
-  results.testDELETE_noLocationId = { status: r3.status, body: (await r3.text()).slice(0, 500) };
-
-  return NextResponse.json(results);
+  return NextResponse.json({
+    ok: true,
+    env: { locationId: LOCATION_ID, objectId: OBJECT_ID, objectKey: OBJECT_KEY },
+    totalRecords: searchData?.total ?? 0,
+    confirmedWorkingFormats: {
+      PUT: 'objects/{OBJECT_ID}/records/{id}?locationId=... — body: { properties: { key: val } }',
+      DELETE: 'objects/{OBJECT_ID}/records/{id} — no locationId anywhere',
+      POST: 'objects/{OBJECT_ID}/records — body: { locationId, properties: { key: val } }',
+    }
+  });
 }
