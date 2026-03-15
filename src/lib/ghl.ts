@@ -332,14 +332,17 @@ function mapCustomObjectToUi(
 
 async function toPropertiesObject(fields: Record<string, unknown>) {
   const fieldMap = await getFieldMap();
-  // HARDCODED verified mapping from real fields.json schema.
-  // This takes HIGHEST priority — overrides the auto-mapper cache which may be stale.
+  // HARDCODED mapping verified from ACTUAL RECORD properties in GHL (not schema guesses).
+  // Source: diagnostics sampleRecord.properties keys + customObjectFields_byKey fieldKeys.
+  // This takes HIGHEST priority — checked before auto-mapper.
   const HARDCODED: Record<string, string> = {
+    // UI key → real GHL custom object field suffix
+    referencia_do_imovel:                  'referncia',          // GHL has typo: referncia
+    situacao_da_disponibilidade_atualizacao: 'situacao_text',    // stored as situacao_text
+    permuta:                               'permuta_text',       // stored as permuta_text
     escolha_a_pretensao_do_negocio:        'escolha_a_pretensao_do_negocio',
     tipo_de_imovel:                        'tipo_de_imovel',
     categoria_do_imovel:                   'categoria_do_imovel',
-    situacao_da_disponibilidade_atualizacao: 'situacao_da_disponibilidade_atualizacao',
-    referencia_do_imovel:                  'referencia_do_imovel',
     endereco_do_imovel:                    'endereco_do_imovel',
     numero_do_endereco_do_imovel:          'numero_do_endereco_do_imovel',
     complemento_de_endereco:               'complemento_de_endereco',
@@ -348,7 +351,6 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     quadra_endereco:                       'quadra_endereco',
     lote_endereco:                         'lote_endereco',
     ponto_de_referencia_endereco:          'ponto_de_referencia_endereco',
-    // fields that are the same in both UI and GHL (no alias needed, listed for clarity)
     cep:                    'cep',
     cidade_endereco:        'cidade_endereco',
     uf_endereco:            'uf_endereco',
@@ -371,11 +373,9 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     valor_de_locacao:       'valor_de_locacao',
     valor_do_condominio:    'valor_do_condominio',
     valor_do_iptu:          'valor_do_iptu',
-    permuta:                'permuta',
     finalidade:             'finalidade',
     descricao_do_imovel:    'descricao_do_imovel',
   };
-  // Legacy fallback aliases (kept for any unmapped keys)
   const fallbackAliases: Record<string, string> = {};
 
   const out: Record<string, unknown> = {};
@@ -437,8 +437,9 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
 
 export async function createProperty(contactId: string, fields: Record<string, unknown>) {
   const safeFields: Record<string, unknown> = { ...fields };
-  if (safeFields['referencia'] === undefined || safeFields['referencia'] === '') {
-    safeFields['referencia'] = `IMOVEL-${Date.now()}`;
+  // Use the UI key here — HARDCODED map will convert it to 'referncia' for GHL
+  if (safeFields['referencia_do_imovel'] === undefined || safeFields['referencia_do_imovel'] === '') {
+    safeFields['referencia_do_imovel'] = `IMOVEL-${Date.now()}`;
   }
 
   const fieldKeys = Object.keys(safeFields);
@@ -483,12 +484,12 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
   const sentKeys = Object.keys(properties);
-  const body = {
-    properties,
-  };
+  // GHL PUT requires: object KEY in URL (not ID) + locationId in body
+  const body = { locationId: LOCATION_ID, properties };
+  const url = `${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`;
+  console.log('[GHL:updateProperty] PUT', url, 'sentKeys:', sentKeys);
 
-  // GHL PUT requires the object KEY not the numeric ID (POST accepts ID but PUT returns 404 with ID)
-  const res = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${recordId}`, {
+  const res = await fetch(url, {
     method: 'PUT',
     headers: headers(),
     body: JSON.stringify(body),

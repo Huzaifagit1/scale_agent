@@ -71,26 +71,26 @@ export async function GET() {
     if (records[0]?.id) {
       const rid = records[0].id;
 
-      // Test A: flat key
+      // Test A: flat key + locationId
       const rA = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { cep: '00000000' } }),
+      });
+      results.testPUT_flatKey_withLocationId = { status: rA.status, body: (await rA.text()).slice(0, 500) };
+
+      // Test B: flat key NO locationId  
+      const rB = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
         method: 'PUT', headers: headers(),
         body: JSON.stringify({ properties: { cep: '00000000' } }),
       });
-      results.testPUT_flatKey = { status: rA.status, body: (await rA.text()).slice(0, 500) };
+      results.testPUT_flatKey_noLocationId = { status: rB.status, body: (await rB.text()).slice(0, 500) };
 
-      // Test B: full prefixed key
-      const rB = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
-        method: 'PUT', headers: headers(),
-        body: JSON.stringify({ properties: { [`custom_objects.${OBJECT_KEY}.cep`]: '00000000' } }),
-      });
-      results.testPUT_fullKey = { status: rB.status, body: (await rB.text()).slice(0, 500) };
-
-      // Test C: properties as array [{key, value}]
+      // Test C: use real stored key 'referncia' (GHL typo)
       const rC = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
         method: 'PUT', headers: headers(),
-        body: JSON.stringify({ properties: [{ key: `custom_objects.${OBJECT_KEY}.cep`, value: '00000000' }] }),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { referncia: 'TEST' } }),
       });
-      results.testPUT_arrayFormat = { status: rC.status, body: (await rC.text()).slice(0, 500) };
+      results.testPUT_referncia = { status: rC.status, body: (await rC.text()).slice(0, 500) };
     }
   } catch (e) {
     results.testPUT_error = String(e);
