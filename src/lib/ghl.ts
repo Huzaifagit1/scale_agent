@@ -437,14 +437,19 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
 
       const values = toArray(rawValue);
       if (optionMap) {
-        out[schemaSuffix] = values
+        const mapped = values
           .map((v) => {
             const labelKey = normalizeLabel(String(v));
             return optionMap[labelKey] ?? v;
           })
-          .map(String);
+          .map(String)
+          .filter((v) => v.trim() !== '');
+        if (mapped.length === 0) continue;
+        out[schemaSuffix] = mapped;
       } else {
-        out[schemaSuffix] = values.map(String);
+        const mapped = values.map(String).filter((v) => v.trim() !== '');
+        if (mapped.length === 0) continue;
+        out[schemaSuffix] = mapped;
       }
       continue;
     }
