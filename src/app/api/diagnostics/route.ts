@@ -71,26 +71,60 @@ export async function GET() {
     if (records[0]?.id) {
       const rid = records[0].id;
 
-      // Test A: flat key + locationId
+      // Test A: full prefixed key + locationId
       const rA = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
         method: 'PUT', headers: headers(),
-        body: JSON.stringify({ locationId: LOCATION_ID, properties: { cep: '00000000' } }),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { [`custom_objects.${OBJECT_KEY}.referncia`]: 'TEST-A' } }),
       });
-      results.testPUT_flatKey_withLocationId = { status: rA.status, body: (await rA.text()).slice(0, 500) };
+      results.testA_fullPrefixedKey = { status: rA.status, body: (await rA.text()).slice(0, 500) };
 
-      // Test B: flat key NO locationId  
+      // Test B: flat key + locationId (simple)
       const rB = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
         method: 'PUT', headers: headers(),
-        body: JSON.stringify({ properties: { cep: '00000000' } }),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { referncia: 'TEST-B' } }),
       });
-      results.testPUT_flatKey_noLocationId = { status: rB.status, body: (await rB.text()).slice(0, 500) };
+      results.testB_flatKey = { status: rB.status, body: (await rB.text()).slice(0, 500) };
 
-      // Test C: use real stored key 'referncia' (GHL typo)
+      // Test C: PATCH instead of PUT
       const rC = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
-        method: 'PUT', headers: headers(),
-        body: JSON.stringify({ locationId: LOCATION_ID, properties: { referncia: 'TEST' } }),
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { referncia: 'TEST-C' } }),
       });
-      results.testPUT_referncia = { status: rC.status, body: (await rC.text()).slice(0, 500) };
+      results.testC_PATCH = { status: rC.status, body: (await rC.text()).slice(0, 500) };
+
+      // Test D: PUT using object ID instead of key
+      const rD = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ locationId: LOCATION_ID, properties: { referncia: 'TEST-D' } }),
+      });
+      results.testD_objectId = { status: rD.status, body: (await rD.text()).slice(0, 500) };
+
+      // Test E: array format with full key
+      const rE = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({
+          locationId: LOCATION_ID,
+          properties: [{ key: `custom_objects.${OBJECT_KEY}.referncia`, value: 'TEST-E' }]
+        }),
+      });
+      results.testE_arrayFullKey = { status: rE.status, body: (await rE.text()).slice(0, 500) };
+
+      // Test F: array format with flat key
+      const rF = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({
+          locationId: LOCATION_ID,
+          properties: [{ key: 'referncia', value: 'TEST-F' }]
+        }),
+      });
+      results.testF_arrayFlatKey = { status: rF.status, body: (await rF.text()).slice(0, 500) };
+
+      // Test G: use 'name' field (the display field) only
+      const rG = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ locationId: LOCATION_ID, name: 'TEST-G' }),
+      });
+      results.testG_nameOnly = { status: rG.status, body: (await rG.text()).slice(0, 500) };
     }
   } catch (e) {
     results.testPUT_error = String(e);
