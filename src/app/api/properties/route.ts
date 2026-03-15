@@ -132,10 +132,17 @@ export async function DELETE(req: NextRequest) {
     const recordId = req.nextUrl.searchParams.get('recordId');
     if (!recordId) return NextResponse.json({ error: 'Missing recordId' }, { status: 400 });
 
+    console.log('[DELETE /api/properties] recordId:', recordId);
     const result = await deleteProperty(recordId);
+    console.log('[DELETE /api/properties] success');
     return NextResponse.json({ success: true, result });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
+    console.error('[DELETE /api/properties] error:', msg);
+    // If record not found, treat as already deleted — success from UI perspective
+    if (msg.includes('404') || msg.includes('not found')) {
+      return NextResponse.json({ success: true, alreadyDeleted: true });
+    }
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

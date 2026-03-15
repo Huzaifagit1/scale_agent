@@ -288,28 +288,21 @@ export default function ImoveisPage() {
           data: (rec.properties || rec) as PropertyData,
         }));
         
-        // Load legacy contact customFields, but avoid duplicating an existing property
-        if (data.contact?.customFields?.length > 0) {
+        // Legacy contact customFields: only show if NO custom object records exist yet.
+        // If records already exist, the contact fields are stale — ignore them entirely.
+        // This prevents duplicates on every page load.
+        if (loaded.length === 0 && data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
           if (Object.keys(customFieldsData).length > 0) {
-            const signature = computeLegacySignature(customFieldsData);
-            setLegacySignature(signature);
-
-            const hideKey = contactId ? `imoveis:hideLegacy:${contactId}` : '';
-            const isHidden = hideKey ? localStorage.getItem(hideKey) === signature : false;
-
-            const hasDuplicate = loaded.some((p) => computeLegacySignature(p.data) === signature);
-
-            if (!isHidden && !hasDuplicate) {
-              loaded = [{
-                id: undefined,
-                isNew: true,
-                isOpen: true,
-                isSaving: false,
-                isDirty: true,
-                data: customFieldsData,
-              }, ...loaded];
-            }
+            setLegacySignature(computeLegacySignature(customFieldsData));
+            loaded = [{
+              id: undefined,
+              isNew: true,
+              isOpen: true,
+              isSaving: false,
+              isDirty: true,
+              data: customFieldsData,
+            }];
           }
         }
         
@@ -341,19 +334,25 @@ export default function ImoveisPage() {
 
   const deleteProperty = (index: number) => {
     const prop = properties[index];
-    if (legacySignature && contactId && computeLegacySignature(prop.data) === legacySignature) {
-      localStorage.setItem(`imoveis:hideLegacy:${contactId}`, legacySignature);
-    }
+    // Remove from UI immediately
     setProperties(ps => ps.filter((_, i) => i !== index));
-    if (prop.id) {
-      fetch(`/api/properties?recordId=${prop.id}`, { method: 'DELETE' })
-        .then(r => r.json())
-        .then(data => {
-          if (data?.error) throw new Error(data.error);
-          addToast('success', 'Imóvel removido');
-        })
-        .catch(() => addToast('error', 'Erro ao remover imóvel'));
+
+    // If it's a new unsaved property, nothing to delete from GHL
+    if (!prop.id || prop.isNew) {
+      return;
     }
+
+    // Delete from GHL
+    fetch(`/api/properties?recordId=${prop.id}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.error) throw new Error(data.error);
+        addToast('success', 'Imóvel removido');
+      })
+      .catch((e) => {
+        console.error('Delete error:', e);
+        addToast('error', 'Erro ao remover imóvel');
+      });
   };
 
   const saveProperty = async (index: number) => {
