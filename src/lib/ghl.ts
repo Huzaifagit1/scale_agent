@@ -532,6 +532,25 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   const text = await res.text();
   log('updateProperty', res.status, text);
   if (!res.ok) {
+    if (
+      res.status === 422 &&
+      text.includes('Escolha a pretensão do negócio') &&
+      Object.prototype.hasOwnProperty.call(properties, 'escolha_a_pretensao_do_negocio')
+    ) {
+      const retryProps = { ...properties };
+      delete (retryProps as Record<string, unknown>)['escolha_a_pretensao_do_negocio'];
+      const retryRes = await fetch(url, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ properties: retryProps }),
+      });
+      const retryText = await retryRes.text();
+      log('updateProperty-retry', retryRes.status, retryText);
+      if (retryRes.ok) {
+        try { return JSON.parse(retryText); } catch { return {}; }
+      }
+    }
+
     throw new Error(
       `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)} escolha_a_pretensao_do_negocio=${JSON.stringify(debugPretensao)}: ${text}`
     );
