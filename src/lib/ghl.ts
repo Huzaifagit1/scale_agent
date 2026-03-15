@@ -29,6 +29,7 @@ const UI_KEYS = new Set<string>(
 type FieldMap = {
   uiToSuffix: Record<string, string>;
   suffixToUi: Record<string, string>;
+  optionLabelToKeyByUi: Record<string, Record<string, string>>;
 };
 
 let fieldMapPromise: Promise<FieldMap> | null = null;
@@ -74,10 +75,41 @@ async function loadContactFieldsMap() {
   return map;
 }
 
+function normalizeFieldType(type: string | undefined) {
+  switch (type) {
+    case 'RADIO':
+      return 'SINGLE_OPTIONS';
+    case 'CHECKBOX':
+      return 'CHECKBOX';
+    case 'LARGE_TEXT':
+      return 'TEXT';
+    default:
+      return type ?? '';
+  }
+}
+
+function isTypeCompatible(uiType: string | undefined, customType: string | undefined) {
+  const ui = normalizeFieldType(uiType);
+  const custom = customType ?? '';
+  if (ui === custom) return true;
+  if (ui === 'TEXT' && custom === 'TEXT') return true;
+  return false;
+}
+
 async function getFieldMap(): Promise<FieldMap> {
   if (!fieldMapPromise) {
     fieldMapPromise = (async () => {
       const contactNameToUi = await loadContactFieldsMap();
+      const uiLabelToKeys = new Map<string, Array<{ key: string; type: string }>>();
+      for (const section of FORM_SECTIONS) {
+        for (const field of section.fields) {
+          const labelKey = normalizeLabel(field.label);
+          const list = uiLabelToKeys.get(labelKey) ?? [];
+          list.push({ key: field.key, type: field.type });
+          uiLabelToKeys.set(labelKey, list);
+        }
+      }
+
       const res = await fetch(
         `${GHL_BASE}/custom-fields/object-key/${OBJECT_OBJECT_KEY}?locationId=${LOCATION_ID}`,
         { headers: headers() }
@@ -85,7 +117,7 @@ async function getFieldMap(): Promise<FieldMap> {
       const text = await res.text();
       log('getCustomObjectFields', res.status, text);
       if (!res.ok) {
-        return { uiToSuffix: {}, suffixToUi: {} };
+        return { uiToSuffix: {}, suffixToUi: {}, optionLabelToKeyByUi: {} };
       }
 
       let fields: Array<{ fieldKey?: string; name?: string }> = [];
@@ -93,11 +125,12 @@ async function getFieldMap(): Promise<FieldMap> {
         const data = JSON.parse(text);
         fields = Array.isArray(data?.fields) ? data.fields : [];
       } catch {
-        return { uiToSuffix: {}, suffixToUi: {} };
+        return { uiToSuffix: {}, suffixToUi: {}, optionLabelToKeyByUi: {} };
       }
 
       const uiToSuffix: Record<string, string> = {};
       const suffixToUi: Record<string, string> = {};
+      const optionLabelToKeyByUi: Record<string, Record<string, string>> = {};
 
       for (const field of fields) {
         if (!field?.fieldKey) continue;
@@ -105,19 +138,47 @@ async function getFieldMap(): Promise<FieldMap> {
         if (UI_KEYS.has(suffix)) {
           uiToSuffix[suffix] = suffix;
           suffixToUi[suffix] = suffix;
+          if (Array.isArray((field as any).options)) {
+            const options = (field as any).options as Array<{ key?: string; label?: string }>;
+            const map: Record<string, string> = {};
+            for (const opt of options) {
+              if (!opt?.key || !opt?.label) continue;
+              map[normalizeLabel(opt.label)] = opt.key;
+            }
+            optionLabelToKeyByUi[suffix] = map;
+          }
           continue;
         }
 
         if (field.name) {
-          const uiKey = contactNameToUi.get(normalizeLabel(field.name));
+          const normalizedName = normalizeLabel(field.name);
+          const uiKey = contactNameToUi.get(normalizedName);
           if (uiKey) {
             uiToSuffix[uiKey] = suffix;
             suffixToUi[suffix] = uiKey;
+          } else {
+            const candidates = uiLabelToKeys.get(normalizedName) ?? [];
+            const match = candidates.find((c) => isTypeCompatible(c.type, (field as any).dataType));
+            if (match) {
+              uiToSuffix[match.key] = suffix;
+              suffixToUi[suffix] = match.key;
+            }
+          }
+
+          if (Array.isArray((field as any).options)) {
+            const options = (field as any).options as Array<{ key?: string; label?: string }>;
+            const map: Record<string, string> = {};
+            for (const opt of options) {
+              if (!opt?.key || !opt?.label) continue;
+              map[normalizeLabel(opt.label)] = opt.key;
+            }
+            const uiKeyForOptions = suffixToUi[suffix];
+            if (uiKeyForOptions) optionLabelToKeyByUi[uiKeyForOptions] = map;
           }
         }
       }
 
-      return { uiToSuffix, suffixToUi };
+      return { uiToSuffix, suffixToUi, optionLabelToKeyByUi };
     })();
   }
   return fieldMapPromise;
@@ -254,6 +315,7 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
 
     const schemaSuffix = fieldMap.uiToSuffix[uiKey] ?? fallbackAliases[uiKey] ?? uiKey;
     const type = FIELD_TYPE_BY_KEY[uiKey];
+    const optionMap = fieldMap.optionLabelToKeyByUi[uiKey];
 
     if (type === 'MONETORY') {
       const num = parseLooseNumber(rawValue);
@@ -270,11 +332,25 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     }
 
     if (Array.isArray(rawValue)) {
-      out[schemaSuffix] = rawValue.map(String);
+      if (optionMap) {
+        out[schemaSuffix] = rawValue
+          .map((v) => {
+            const labelKey = normalizeLabel(String(v));
+            return optionMap[labelKey] ?? v;
+          })
+          .map(String);
+      } else {
+        out[schemaSuffix] = rawValue.map(String);
+      }
       continue;
     }
 
-    out[schemaSuffix] = String(rawValue);
+    if (optionMap) {
+      const labelKey = normalizeLabel(String(rawValue));
+      out[schemaSuffix] = optionMap[labelKey] ?? String(rawValue);
+    } else {
+      out[schemaSuffix] = String(rawValue);
+    }
   }
 
   return out;
