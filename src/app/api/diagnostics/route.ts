@@ -18,54 +18,83 @@ export async function GET() {
     return NextResponse.json({ ok: false, message: 'Missing env vars' }, { status: 500 });
   }
 
-  // 1. Fetch actual custom object field schema
-  const fieldsRes = await fetch(
+  const results: Record<string, unknown> = {
+    env: { locationId: LOCATION_ID, objectId: OBJECT_ID, objectKey: OBJECT_KEY }
+  };
+
+  // 1. Custom object fields via object-key endpoint
+  const r1 = await fetch(
     `${GHL_BASE}/custom-fields/object-key/${OBJECT_FULL_KEY}?locationId=${LOCATION_ID}`,
     { headers: headers() }
   );
-  const fieldsText = await fieldsRes.text();
-  let schemaFields: Array<{ fieldKey: string; name: string; dataType: string }> = [];
-  try {
-    const parsed = JSON.parse(fieldsText);
-    schemaFields = (parsed.fields || []).map((f: Record<string, unknown>) => ({
-      fieldKey: f.fieldKey,
-      name: f.name,
-      dataType: f.dataType,
-    }));
-  } catch { /* ignore */ }
+  const t1 = await r1.text();
+  results.customObjectFields_byKey = { status: r1.status, body: t1.slice(0, 3000) };
 
-  // 2. Fetch one existing record to see its actual property keys
-  const searchRes = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/search`, {
+  // 2. Custom object fields via object ID
+  const r2 = await fetch(
+    `${GHL_BASE}/custom-fields/${OBJECT_ID}?locationId=${LOCATION_ID}`,
+    { headers: headers() }
+  );
+  const t2 = await r2.text();
+  results.customObjectFields_byId = { status: r2.status, body: t2.slice(0, 3000) };
+
+  // 3. Fetch a real record and show its raw properties
+  const r3 = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/search`, {
     method: 'POST',
     headers: headers(),
     body: JSON.stringify({ locationId: LOCATION_ID, page: 1, pageLimit: 1 }),
   });
-  const searchText = await searchRes.text();
-  let sampleRecord: Record<string, unknown> = {};
+  const t3 = await r3.text();
+  results.searchRecords = { status: r3.status, body: t3.slice(0, 2000) };
+
+  // 4. Try fetching one record in full
   try {
-    const parsed = JSON.parse(searchText);
+    const parsed = JSON.parse(t3);
     const records = parsed.records || parsed.data || [];
-    if (records.length > 0) {
-      const rec = records[0];
-      // Fetch the full record to see its properties
-      const recRes = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/${rec.id}`, { headers: headers() });
-      const recText = await recRes.text();
-      const recParsed = JSON.parse(recText);
-      sampleRecord = recParsed.record?.properties || recParsed.properties || {};
+    if (records[0]?.id) {
+      const r4 = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/${records[0].id}`, { headers: headers() });
+      const t4 = await r4.text();
+      results.sampleRecord = { status: r4.status, body: t4.slice(0, 3000) };
     }
   } catch { /* ignore */ }
 
-  // 3. Test PUT with minimal body to see exact error
-  return NextResponse.json({
-    ok: true,
-    env: { locationId: LOCATION_ID, objectId: OBJECT_ID, objectKey: OBJECT_KEY },
-    schemaFieldCount: schemaFields.length,
-    // Suffixes only (strip "custom_objects.imveis." prefix)
-    schemaFieldSuffixes: schemaFields.map(f => ({
-      suffix: String(f.fieldKey).replace(`${OBJECT_FULL_KEY}.`, ''),
-      name: f.name,
-      type: f.dataType,
-    })),
-    sampleRecordKeys: Object.keys(sampleRecord),
+  // 5. Try a minimal PUT with just one simple text field to isolate the issue
+  // We'll try with full key prefix vs without
+  const testRecordRes = await fetch(`${GHL_BASE}/objects/${OBJECT_ID}/records/search`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ locationId: LOCATION_ID, page: 1, pageLimit: 1 }),
   });
+  try {
+    const parsed = JSON.parse(await testRecordRes.text());
+    const records = parsed.records || parsed.data || [];
+    if (records[0]?.id) {
+      const rid = records[0].id;
+
+      // Test A: flat key
+      const rA = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ properties: { cep: '00000000' } }),
+      });
+      results.testPUT_flatKey = { status: rA.status, body: (await rA.text()).slice(0, 500) };
+
+      // Test B: full prefixed key
+      const rB = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ properties: { [`custom_objects.${OBJECT_KEY}.cep`]: '00000000' } }),
+      });
+      results.testPUT_fullKey = { status: rB.status, body: (await rB.text()).slice(0, 500) };
+
+      // Test C: properties as array [{key, value}]
+      const rC = await fetch(`${GHL_BASE}/objects/${OBJECT_KEY}/records/${rid}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ properties: [{ key: `custom_objects.${OBJECT_KEY}.cep`, value: '00000000' }] }),
+      });
+      results.testPUT_arrayFormat = { status: rC.status, body: (await rC.text()).slice(0, 500) };
+    }
+  } catch (e) {
+    results.testPUT_error = String(e);
+  }
+
+  return NextResponse.json(results, { status: 200 });
 }
