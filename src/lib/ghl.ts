@@ -424,6 +424,13 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
       continue;
     }
 
+    if (type === 'CHECKBOX') {
+      const labelKey = normalizeLabel(String(rawValue));
+      const mapped = optionMap ? optionMap[labelKey] ?? String(rawValue) : String(rawValue);
+      out[schemaSuffix] = [String(mapped)];
+      continue;
+    }
+
     if (optionMap) {
       const labelKey = normalizeLabel(String(rawValue));
       out[schemaSuffix] = optionMap[labelKey] ?? String(rawValue);
