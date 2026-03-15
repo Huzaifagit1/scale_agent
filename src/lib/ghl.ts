@@ -1,4 +1,6 @@
 import { FORM_SECTIONS } from './fields';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
 const GHL_BASE = 'https://services.leadconnectorhq.com';
 const API_KEY = process.env.GHL_API_TOKEN!;
@@ -20,6 +22,17 @@ const FIELD_TYPE_BY_KEY: Record<string, string> = (() => {
   return map;
 })();
 
+const UI_KEYS = new Set<string>(
+  FORM_SECTIONS.flatMap((section) => section.fields.map((field) => field.key))
+);
+
+type FieldMap = {
+  uiToSuffix: Record<string, string>;
+  suffixToUi: Record<string, string>;
+};
+
+let fieldMapPromise: Promise<FieldMap> | null = null;
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -37,6 +50,77 @@ function getObjectId(): string {
     );
   }
   return objectId;
+}
+
+function normalizeLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+async function loadContactFieldsMap() {
+  const raw = await readFile(path.join(process.cwd(), 'fields.json'), 'utf-8');
+  const parsed = JSON.parse(raw) as { customFields?: Array<{ name?: string; fieldKey?: string }> };
+  const map = new Map<string, string>();
+  for (const field of parsed.customFields ?? []) {
+    if (!field?.name || !field?.fieldKey) continue;
+    const suffix = field.fieldKey.replace(/^contact\./, '');
+    if (!UI_KEYS.has(suffix)) continue;
+    map.set(normalizeLabel(field.name), suffix);
+  }
+  return map;
+}
+
+async function getFieldMap(): Promise<FieldMap> {
+  if (!fieldMapPromise) {
+    fieldMapPromise = (async () => {
+      const contactNameToUi = await loadContactFieldsMap();
+      const res = await fetch(
+        `${GHL_BASE}/custom-fields/object-key/${OBJECT_OBJECT_KEY}?locationId=${LOCATION_ID}`,
+        { headers: headers() }
+      );
+      const text = await res.text();
+      log('getCustomObjectFields', res.status, text);
+      if (!res.ok) {
+        return { uiToSuffix: {}, suffixToUi: {} };
+      }
+
+      let fields: Array<{ fieldKey?: string; name?: string }> = [];
+      try {
+        const data = JSON.parse(text);
+        fields = Array.isArray(data?.fields) ? data.fields : [];
+      } catch {
+        return { uiToSuffix: {}, suffixToUi: {} };
+      }
+
+      const uiToSuffix: Record<string, string> = {};
+      const suffixToUi: Record<string, string> = {};
+
+      for (const field of fields) {
+        if (!field?.fieldKey) continue;
+        const suffix = field.fieldKey.replace(`${OBJECT_OBJECT_KEY}.`, '');
+        if (UI_KEYS.has(suffix)) {
+          uiToSuffix[suffix] = suffix;
+          suffixToUi[suffix] = suffix;
+          continue;
+        }
+
+        if (field.name) {
+          const uiKey = contactNameToUi.get(normalizeLabel(field.name));
+          if (uiKey) {
+            uiToSuffix[uiKey] = suffix;
+            suffixToUi[suffix] = uiKey;
+          }
+        }
+      }
+
+      return { uiToSuffix, suffixToUi };
+    })();
+  }
+  return fieldMapPromise;
 }
 
 function parseLooseNumber(value: unknown): number | undefined {
@@ -108,6 +192,7 @@ export async function getPropertiesForContact(contactId: string) {
     .filter((id): id is string => Boolean(id));
 
   const objectId = getObjectId();
+  const fieldMap = await getFieldMap();
   const records = await Promise.all(
     recordIds.map(async (recordId) => {
       const res = await fetch(`${GHL_BASE}/objects/${objectId}/records/${recordId}`, { headers: headers() });
@@ -116,7 +201,11 @@ export async function getPropertiesForContact(contactId: string) {
       if (!res.ok) return null;
       try {
         const data = JSON.parse(text);
-        return data.record || data;
+        const record = data.record || data;
+        if (record?.properties && typeof record.properties === 'object') {
+          record.properties = mapCustomObjectToUi(record.properties, fieldMap.suffixToUi);
+        }
+        return record;
       } catch {
         return null;
       }
@@ -126,24 +215,33 @@ export async function getPropertiesForContact(contactId: string) {
   return records.filter(Boolean);
 }
 
-function toPropertiesObject(fields: Record<string, unknown>) {
-  const aliases: Record<string, string> =
-    OBJECT_KEY === 'imveis'
-      ? {
-          // Custom Object "Imóveis" schema keys differ from our UI keys.
-          pretensao_do_negocio: 'escolha_a_pretensao_do_negocio',
-          tipo_do_imovel: 'tipo_de_imovel',
-          categoria: 'categoria_do_imovel',
-          endereco: 'endereco_do_imovel',
-          referencia: 'referncia',
-        }
-      : {};
+function mapCustomObjectToUi(
+  properties: Record<string, unknown>,
+  suffixToUi: Record<string, string>
+) {
+  const out: Record<string, unknown> = {};
+  for (const [suffix, rawValue] of Object.entries(properties)) {
+    const uiKey = suffixToUi[suffix] ?? suffix;
+    if (!UI_KEYS.has(uiKey)) continue;
+
+    if (isObject(rawValue) && typeof rawValue.value === 'number') {
+      out[uiKey] = String(rawValue.value);
+      continue;
+    }
+
+    out[uiKey] = rawValue as unknown;
+  }
+  return out;
+}
+
+async function toPropertiesObject(fields: Record<string, unknown>) {
+  const fieldMap = await getFieldMap();
 
   const out: Record<string, unknown> = {};
   for (const [uiKey, rawValue] of Object.entries(fields)) {
     if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
 
-    const schemaSuffix = aliases[uiKey] ?? uiKey;
+    const schemaSuffix = fieldMap.uiToSuffix[uiKey] ?? uiKey;
     const type = FIELD_TYPE_BY_KEY[uiKey];
 
     if (type === 'MONETORY') {
@@ -178,7 +276,7 @@ export async function createProperty(contactId: string, fields: Record<string, u
   }
 
   const fieldKeys = Object.keys(safeFields);
-  const properties = toPropertiesObject(safeFields);
+  const properties = await toPropertiesObject(safeFields);
   const sentKeys = Object.keys(properties);
   const body = {
     locationId: LOCATION_ID,
@@ -217,7 +315,7 @@ export async function createProperty(contactId: string, fields: Record<string, u
 
 export async function updateProperty(recordId: string, fields: Record<string, unknown>) {
   const fieldKeys = Object.keys(fields);
-  const properties = toPropertiesObject(fields);
+  const properties = await toPropertiesObject(fields);
   const sentKeys = Object.keys(properties);
   const body = {
     properties,

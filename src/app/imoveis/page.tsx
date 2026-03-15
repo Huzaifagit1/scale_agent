@@ -270,18 +270,18 @@ export default function ImoveisPage() {
           data: (rec.properties || rec) as PropertyData,
         }));
         
-        // If no custom object records, try to load from contact's customFields
-        if (loaded.length === 0 && data.contact?.customFields?.length > 0) {
+        // Also load legacy contact customFields if they exist (can be saved as a new property)
+        if (data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
           if (Object.keys(customFieldsData).length > 0) {
             loaded = [{
               id: undefined,
-              isNew: false,
+              isNew: true,
               isOpen: true,
               isSaving: false,
-              isDirty: false,
+              isDirty: true,
               data: customFieldsData,
-            }];
+            }, ...loaded];
           }
         }
         
