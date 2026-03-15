@@ -244,6 +244,7 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
           categoria: 'categoria_do_imovel',
           tipo_do_imovel: 'tipo_de_imovel',
           pretensao_do_negocio: 'escolha_a_pretensao_do_negocio',
+          situacao: 'situacao_text',
         }
       : {};
 
