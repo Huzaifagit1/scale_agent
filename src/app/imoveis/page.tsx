@@ -23,6 +23,23 @@ function emptyProperty(): Property {
   return { isNew: true, isOpen: true, isSaving: false, isDirty: true, data: {} };
 }
 
+function normalizeFieldValue(value?: string | string[]) {
+  return String(Array.isArray(value) ? value.join(' ') : value || '').trim().toLowerCase();
+}
+
+function computeLegacySignature(data: PropertyData) {
+  const keys = [
+    'referencia',
+    'endereco',
+    'cidade_endereco',
+    'cep',
+    'numero',
+    'bairro_oficial',
+    'bairro_commercial',
+  ];
+  return keys.map((k) => normalizeFieldValue(data[k])).join('|');
+}
+
 function getPropertyLabel(p: Property, index: number): string {
   const addr = [
     p.data['cidade_endereco'],
@@ -248,6 +265,7 @@ export default function ImoveisPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [legacySignature, setLegacySignature] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // ── Load contact + existing properties ──
@@ -274,24 +292,15 @@ export default function ImoveisPage() {
         if (data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
           if (Object.keys(customFieldsData).length > 0) {
-            const normalize = (v?: string | string[]) =>
-              String(Array.isArray(v) ? v.join(' ') : v || '').trim().toLowerCase();
-            const legacySig = [
-              normalize(customFieldsData['referencia']),
-              normalize(customFieldsData['endereco']),
-              normalize(customFieldsData['cidade_endereco']),
-            ].join('|');
+            const signature = computeLegacySignature(customFieldsData);
+            setLegacySignature(signature);
 
-            const hasDuplicate = loaded.some((p) => {
-              const sig = [
-                normalize(p.data['referencia']),
-                normalize(p.data['endereco']),
-                normalize(p.data['cidade_endereco']),
-              ].join('|');
-              return sig !== '||' && sig === legacySig;
-            });
+            const hideKey = contactId ? `imoveis:hideLegacy:${contactId}` : '';
+            const isHidden = hideKey ? localStorage.getItem(hideKey) === signature : false;
 
-            if (!hasDuplicate) {
+            const hasDuplicate = loaded.some((p) => computeLegacySignature(p.data) === signature);
+
+            if (!isHidden && !hasDuplicate) {
               loaded = [{
                 id: undefined,
                 isNew: true,
@@ -331,6 +340,10 @@ export default function ImoveisPage() {
   };
 
   const deleteProperty = (index: number) => {
+    const prop = properties[index];
+    if (legacySignature && contactId && computeLegacySignature(prop.data) === legacySignature) {
+      localStorage.setItem(`imoveis:hideLegacy:${contactId}`, legacySignature);
+    }
     setProperties(ps => ps.filter((_, i) => i !== index));
   };
 
