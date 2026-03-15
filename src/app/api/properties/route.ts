@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createProperty, updateProperty, deleteProperty } from '@/lib/ghl';
+import { createProperty, updateProperty, deleteProperty, getPropertiesForContact } from '@/lib/ghl';
 import { FORM_SECTIONS } from '@/lib/fields';
 
 function normalizeIncomingFields(fields: unknown): Record<string, unknown> {
@@ -59,8 +59,31 @@ export async function PUT(req: NextRequest) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       if (msg.includes('(404)') && contactId) {
-        const created = await createProperty(contactId, normalizedFields);
-        return NextResponse.json({ success: true, result: created, upserted: true });
+        const candidates = await getPropertiesForContact(contactId);
+        const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase();
+        const targetRef = normalize((normalizedFields as any).referencia);
+        const targetAddress = normalize((normalizedFields as any).endereco);
+        const targetCity = normalize((normalizedFields as any).cidade_endereco);
+        const targetCep = normalize((normalizedFields as any).cep);
+
+        const match = candidates.find((rec: any) => {
+          const props = rec?.properties ?? rec ?? {};
+          const refMatch = targetRef && normalize(props.referencia) === targetRef;
+          if (refMatch) return true;
+          const addrMatch =
+            targetAddress &&
+            targetCity &&
+            normalize(props.endereco) === targetAddress &&
+            normalize(props.cidade_endereco) === targetCity;
+          if (addrMatch) return true;
+          const cepMatch = targetCep && normalize(props.cep) === targetCep;
+          return cepMatch && targetCity && normalize(props.cidade_endereco) === targetCity;
+        });
+
+        if (match?.id) {
+          const result = await updateProperty(match.id, normalizedFields);
+          return NextResponse.json({ success: true, result, matchedId: match.id });
+        }
       }
       throw e;
     }
