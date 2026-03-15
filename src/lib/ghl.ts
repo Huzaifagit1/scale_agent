@@ -509,9 +509,9 @@ export async function updateProperty(recordId: string, fields: Record<string, un
 }
 
 export async function deleteProperty(recordId: string) {
-  // DELETE: object ID in URL + locationId as query param (same pattern as PUT)
+  // DELETE: object ID in URL, NO locationId (GHL rejects it if present)
   const res = await fetch(
-    `${GHL_BASE}/objects/${getObjectId()}/records/${recordId}?locationId=${LOCATION_ID}`,
+    `${GHL_BASE}/objects/${getObjectId()}/records/${recordId}`,
     { method: 'DELETE', headers: headers() }
   );
   const text = await res.text();

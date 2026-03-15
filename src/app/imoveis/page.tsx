@@ -344,16 +344,12 @@ export default function ImoveisPage() {
 
     // Delete from GHL
     fetch(`/api/properties?recordId=${prop.id}`, { method: 'DELETE' })
-      .then(async r => {
-        const data = await r.json();
-        console.log('[delete] status:', r.status, 'body:', JSON.stringify(data));
-        if (!r.ok || data?.error) throw new Error(`${r.status}: ${data?.error || JSON.stringify(data)}`);
+      .then(r => r.json())
+      .then(data => {
+        if (data?.error) throw new Error(data.error);
         addToast('success', 'Imóvel removido');
       })
-      .catch((e) => {
-        console.error('[delete] error:', e);
-        addToast('error', `Erro ao remover: ${e.message}`);
-      });
+      .catch(() => addToast('error', 'Erro ao remover imóvel'));
   };
 
   const saveProperty = async (index: number) => {
