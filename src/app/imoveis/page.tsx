@@ -363,11 +363,12 @@ export default function ImoveisPage() {
     setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: true } : p));
 
     try {
-      const method = prop.isNew ? 'POST' : 'PUT';
+      const method = prop.isNew || !prop.id ? 'POST' : 'PUT';
       const ghlFields = mapPropertyToGhlFields(prop.data);
-      const body = prop.isNew
+      const body = method === 'POST'
         ? { contactId, fields: ghlFields }
         : { recordId: prop.id, contactId, fields: ghlFields };
+      console.log('[saveProperty] method:', method, 'recordId:', prop.id);
 
       const res = await fetch('/api/properties', {
         method,
@@ -377,7 +378,15 @@ export default function ImoveisPage() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erro');
 
-      const newId = data.result?.id || data.result?.record?.id || prop.id;
+      // data.id is set by our API route; fall back to digging into the GHL result shape
+      const newId: string | undefined =
+        data.id ||
+        data.matchedId ||
+        data.result?.id ||
+        data.result?.record?.id ||
+        data.result?.data?.id ||
+        prop.id;
+      console.log('[saveProperty] stored newId:', newId, 'from data.id:', data.id, 'result keys:', Object.keys(data.result || {}));
       setProperties(ps => ps.map((p, i) => i === index
         ? { ...p, id: newId, isNew: false, isSaving: false, isDirty: false }
         : p

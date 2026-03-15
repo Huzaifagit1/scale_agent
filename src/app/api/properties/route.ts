@@ -23,6 +23,25 @@ function normalizeIncomingFields(fields: unknown): Record<string, unknown> {
   return out;
 }
 
+// Extract record ID from any shape GHL might return
+function extractRecordId(result: unknown): string | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const r = result as Record<string, unknown>;
+  // Direct id
+  if (typeof r.id === 'string' && r.id) return r.id;
+  // Nested under record
+  if (r.record && typeof r.record === 'object') {
+    const rec = r.record as Record<string, unknown>;
+    if (typeof rec.id === 'string' && rec.id) return rec.id;
+  }
+  // Nested under data
+  if (r.data && typeof r.data === 'object') {
+    const d = r.data as Record<string, unknown>;
+    if (typeof d.id === 'string' && d.id) return d.id;
+  }
+  return undefined;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -35,7 +54,10 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createProperty(contactId, normalizedFields);
-    return NextResponse.json({ success: true, result });
+    const recordId = extractRecordId(result);
+    console.log('[POST /api/properties] GHL result keys:', Object.keys(result || {}), 'recordId:', recordId);
+    // Always return id at the top level so the UI can reliably read it
+    return NextResponse.json({ success: true, result, id: recordId });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -48,6 +70,8 @@ export async function PUT(req: NextRequest) {
     const { recordId, fields, contactId } = body;
     if (!recordId || !fields) return NextResponse.json({ error: 'Missing data' }, { status: 400 });
 
+    console.log('[PUT /api/properties] recordId:', recordId);
+
     const normalizedFields = normalizeIncomingFields(fields);
     if (Object.keys(normalizedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
@@ -55,13 +79,16 @@ export async function PUT(req: NextRequest) {
 
     try {
       const result = await updateProperty(recordId, normalizedFields);
-      return NextResponse.json({ success: true, result });
+      return NextResponse.json({ success: true, result, id: recordId });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
+
+      // 404 fallback: try to match by reference/address among contact's existing records
       if (msg.includes('(404)') && contactId) {
+        console.log('[PUT fallback] 404 on recordId', recordId, '— searching by field match');
         const candidates = await getPropertiesForContact(contactId);
         const normalize = (v: unknown) => String(v ?? '').trim().toLowerCase();
-        const pick = (obj: any, keys: string[]) => {
+        const pick = (obj: Record<string, unknown>, keys: string[]) => {
           for (const key of keys) {
             const val = obj?.[key];
             if (val !== undefined && val !== null && String(val).trim() !== '') return normalize(val);
@@ -74,23 +101,22 @@ export async function PUT(req: NextRequest) {
         const targetCity = pick(normalizedFields, ['cidade_endereco']);
         const targetCep = pick(normalizedFields, ['cep']);
 
-        const match = candidates.find((rec: any) => {
-          const props = rec?.properties ?? rec ?? {};
-          const refMatch = targetRef && pick(props, ['referencia', 'referncia']) === targetRef;
-          if (refMatch) return true;
-          const addrMatch =
-            targetAddress &&
-            targetCity &&
+        const match = candidates.find((rec: Record<string, unknown>) => {
+          const props = (rec?.properties ?? rec ?? {}) as Record<string, unknown>;
+          if (targetRef && pick(props, ['referencia', 'referncia']) === targetRef) return true;
+          if (targetAddress && targetCity &&
             pick(props, ['endereco', 'endereco_do_imovel']) === targetAddress &&
+            pick(props, ['cidade_endereco']) === targetCity) return true;
+          return targetCep &&
+            pick(props, ['cep']) === targetCep &&
+            targetCity &&
             pick(props, ['cidade_endereco']) === targetCity;
-          if (addrMatch) return true;
-          const cepMatch = targetCep && pick(props, ['cep']) === targetCep;
-          return cepMatch && targetCity && pick(props, ['cidade_endereco']) === targetCity;
-        });
+        }) as (Record<string, unknown> & { id?: string }) | undefined;
 
         if (match?.id) {
+          console.log('[PUT fallback] matched record:', match.id);
           const result = await updateProperty(match.id, normalizedFields);
-          return NextResponse.json({ success: true, result, matchedId: match.id });
+          return NextResponse.json({ success: true, result, id: match.id, matchedId: match.id });
         }
       }
       throw e;
