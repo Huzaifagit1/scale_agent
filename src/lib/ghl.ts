@@ -332,17 +332,24 @@ function mapCustomObjectToUi(
 
 async function toPropertiesObject(fields: Record<string, unknown>) {
   const fieldMap = await getFieldMap();
-  const fallbackAliases: Record<string, string> =
-    OBJECT_KEY === 'imveis'
-      ? {
-          referencia: 'referncia',
-          endereco: 'endereco_do_imovel',
-          categoria: 'categoria_do_imovel',
-          tipo_do_imovel: 'tipo_de_imovel',
-          pretensao_do_negocio: 'escolha_a_pretensao_do_negocio',
-          situacao: 'situacao_text',
-        }
-      : {};
+  // Complete verified mapping: UI key → real GHL custom object field suffix
+  // Generated from actual fields.json schema - do not guess these
+  const fallbackAliases: Record<string, string> = {
+    pretensao_do_negocio:                  'escolha_a_pretensao_do_negocio',
+    tipo_do_imovel:                        'tipo_de_imovel',
+    categoria:                             'categoria_do_imovel',
+    situacao:                              'situacao_da_disponibilidade_atualizacao',
+    referencia:                            'referencia_do_imovel',
+    endereco:                              'endereco_do_imovel',
+    numero:                                'numero_do_endereco_do_imovel',
+    complemento:                           'complemento_de_endereco',
+    bairro_oficial:                        'bairro_oficial_endereco',
+    regiao:                                'regiao_endereco',
+    quadra:                                'quadra_endereco',
+    lote:                                  'lote_endereco',
+    ponto_de_referencia:                   'ponto_de_referencia_endereco',
+    numero_de_dormitorios:                 'numero_de_dormitorios',
+  };
 
   const out: Record<string, unknown> = {};
   for (const [uiKey, rawValue] of Object.entries(fields)) {

@@ -50,8 +50,8 @@ function getPropertyLabel(p: Property, index: number): string {
 
 function getPropertyMeta(p: Property): string {
   const parts: string[] = [];
-  if (p.data['pretensao_do_negocio']) parts.push(String(p.data['pretensao_do_negocio']));
-  if (p.data['tipo_do_imovel']) parts.push(String(p.data['tipo_do_imovel']));
+  if (p.data['escolha_a_pretensao_do_negocio']) parts.push(String(p.data['escolha_a_pretensao_do_negocio']));
+  if (p.data['tipo_de_imovel']) parts.push(String(p.data['tipo_de_imovel']));
   if (p.data['numero_de_dormitorios']) parts.push(`${p.data['numero_de_dormitorios']} dorm.`);
   return parts.join(' · ') || (p.isNew ? 'Novo imóvel' : 'Imóvel cadastrado');
 }
