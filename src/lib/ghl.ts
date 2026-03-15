@@ -514,6 +514,7 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
   const sentKeys = Object.keys(properties);
+  const debugPretensao = properties['escolha_a_pretensao_do_negocio'];
   // GHL PUT (confirmed working format):
   // - Object ID in URL (not key)
   // - locationId as QUERY PARAM (NOT in body — GHL rejects it if in body)
@@ -532,7 +533,7 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   log('updateProperty', res.status, text);
   if (!res.ok) {
     throw new Error(
-      `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)}: ${text}`
+      `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)} escolha_a_pretensao_do_negocio=${JSON.stringify(debugPretensao)}: ${text}`
     );
   }
   try { return JSON.parse(text); } catch { return {}; }
