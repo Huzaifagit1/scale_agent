@@ -236,12 +236,22 @@ function mapCustomObjectToUi(
 
 async function toPropertiesObject(fields: Record<string, unknown>) {
   const fieldMap = await getFieldMap();
+  const fallbackAliases: Record<string, string> =
+    OBJECT_KEY === 'imveis'
+      ? {
+          referencia: 'referncia',
+          endereco: 'endereco_do_imovel',
+          categoria: 'categoria_do_imovel',
+          tipo_do_imovel: 'tipo_de_imovel',
+          pretensao_do_negocio: 'escolha_a_pretensao_do_negocio',
+        }
+      : {};
 
   const out: Record<string, unknown> = {};
   for (const [uiKey, rawValue] of Object.entries(fields)) {
     if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
 
-    const schemaSuffix = fieldMap.uiToSuffix[uiKey] ?? uiKey;
+    const schemaSuffix = fieldMap.uiToSuffix[uiKey] ?? fallbackAliases[uiKey] ?? uiKey;
     const type = FIELD_TYPE_BY_KEY[uiKey];
 
     if (type === 'MONETORY') {
