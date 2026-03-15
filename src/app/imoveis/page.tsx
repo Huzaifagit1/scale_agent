@@ -265,7 +265,6 @@ export default function ImoveisPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [legacySignature, setLegacySignature] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // ── Load contact + existing properties ──
@@ -288,21 +287,26 @@ export default function ImoveisPage() {
           data: (rec.properties || rec) as PropertyData,
         }));
         
-        // Legacy contact customFields: only show if NO custom object records exist yet.
-        // If records already exist, the contact fields are stale — ignore them entirely.
-        // This prevents duplicates on every page load.
-        if (loaded.length === 0 && data.contact?.customFields?.length > 0) {
+        // Legacy contact customFields: merge into an existing record if it matches,
+        // otherwise show it as a separate (new) property.
+        if (data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
           if (Object.keys(customFieldsData).length > 0) {
-            setLegacySignature(computeLegacySignature(customFieldsData));
-            loaded = [{
-              id: undefined,
-              isNew: true,
-              isOpen: true,
-              isSaving: false,
-              isDirty: true,
-              data: customFieldsData,
-            }];
+            const signature = computeLegacySignature(customFieldsData);
+            const matchIndex = loaded.findIndex((p) => computeLegacySignature(p.data) === signature);
+            if (matchIndex >= 0) {
+              const match = loaded[matchIndex];
+              loaded[matchIndex] = { ...match, data: { ...customFieldsData, ...match.data } };
+            } else {
+              loaded = [{
+                id: undefined,
+                isNew: true,
+                isOpen: true,
+                isSaving: false,
+                isDirty: true,
+                data: customFieldsData,
+              }, ...loaded];
+            }
           }
         }
         
