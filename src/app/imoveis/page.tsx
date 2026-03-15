@@ -345,6 +345,15 @@ export default function ImoveisPage() {
       localStorage.setItem(`imoveis:hideLegacy:${contactId}`, legacySignature);
     }
     setProperties(ps => ps.filter((_, i) => i !== index));
+    if (prop.id) {
+      fetch(`/api/properties?recordId=${prop.id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          if (data?.error) throw new Error(data.error);
+          addToast('success', 'Imóvel removido');
+        })
+        .catch(() => addToast('error', 'Erro ao remover imóvel'));
+    }
   };
 
   const saveProperty = async (index: number) => {

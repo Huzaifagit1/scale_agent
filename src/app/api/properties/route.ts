@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createProperty, updateProperty } from '@/lib/ghl';
+import { createProperty, updateProperty, deleteProperty } from '@/lib/ghl';
 import { FORM_SECTIONS } from '@/lib/fields';
 
 function normalizeIncomingFields(fields: unknown): Record<string, unknown> {
@@ -54,6 +54,19 @@ export async function PUT(req: NextRequest) {
     }
 
     const result = await updateProperty(recordId, normalizedFields);
+    return NextResponse.json({ success: true, result });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Unknown error';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const recordId = req.nextUrl.searchParams.get('recordId');
+    if (!recordId) return NextResponse.json({ error: 'Missing recordId' }, { status: 400 });
+
+    const result = await deleteProperty(recordId);
     return NextResponse.json({ success: true, result });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error';

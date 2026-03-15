@@ -424,6 +424,19 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   try { return JSON.parse(text); } catch { return {}; }
 }
 
+export async function deleteProperty(recordId: string) {
+  const res = await fetch(`${GHL_BASE}/objects/${getObjectId()}/records/${recordId}`, {
+    method: 'DELETE',
+    headers: headers(),
+  });
+  const text = await res.text();
+  log('deleteProperty', res.status, text);
+  if (!res.ok) {
+    throw new Error(`Failed to delete (${res.status}): ${text}`);
+  }
+  try { return JSON.parse(text); } catch { return {}; }
+}
+
 async function associateToContact(recordId: string, contactId: string) {
   const assocRes = await fetch(
     `${GHL_BASE}/associations/objectKey/${OBJECT_OBJECT_KEY}?locationId=${LOCATION_ID}`,
