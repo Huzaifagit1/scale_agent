@@ -7,6 +7,7 @@ export type FieldDef = {
   label: string;
   type: 'TEXT' | 'NUMERICAL' | 'MONETORY' | 'CHECKBOX' | 'RADIO' | 'DATE' | 'LARGE_TEXT';
   options?: string[];
+  readOnly?: boolean;
 };
 
 export type Section = {
@@ -25,7 +26,7 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'categoria_do_imovel', ghlId: 'hkUd2nSwCOKCQGl0HBM7', label: 'Categoria', type: 'RADIO', options: ['Cobertura', 'Duplex', 'Flat', 'Kitnet', 'Sobrado', 'Terreo(a)', 'Normal', 'Padrão'] },
       { key: 'finalidade', ghlId: 'KHnkDUqmqTBGMZG7OWlD', label: 'Finalidade', type: 'RADIO', options: ['Comercial', 'Industrial', 'Residencial', 'Rural', 'Temporada'] },
       { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Em avaliação', 'Avaliado', 'Em validação', 'Suspenso'] },
-      { key: 'referencia_do_imovel', ghlId: 'W5rMkS4725rkUH6YPfUW', label: 'Referência', type: 'TEXT' },
+      { key: 'referencia_do_imovel', ghlId: 'W5rMkS4725rkUH6YPfUW', label: 'Referência', type: 'TEXT', readOnly: true },
     ]
   },
   {
@@ -91,117 +92,6 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'valor_do_condominio', ghlId: 'X83IBp8lOW4g7E5PeN9J', label: 'Valor do condomínio (R$)', type: 'MONETORY' },
       { key: 'temporada', ghlId: 'T88XCd8usC8jQLyurI0b', label: 'Temporada', type: 'TEXT' },
       { key: 'permuta', ghlId: 'zJLi1she6Sex8xGjyu6n', label: 'Permuta', type: 'TEXT' },
-    ]
-  },
-  {
-    id: 'descricao',
-    title: 'Descrição',
-    fields: [
-      { key: 'descricao_do_imovel', ghlId: '5eAYN3imP93cH8ntQ7sA', label: 'Descrição do imóvel', type: 'LARGE_TEXT' },
-    ]
-  },
-  {
-    id: 'caracteristicas_basico',
-    title: 'Características - Básico',
-    fields: [
-      {
-        key: 'caracteristicas_basico',
-        ghlId: 'ny3cIt9wAFiV1UIPXo35',
-        label: 'Básico',
-        type: 'CHECKBOX',
-        options: ['Acesso deficientes', 'Corrimão', 'Gradeado', 'Pavimentação', 'Água', 'Energia', 'Hidrômetro individual', 'Rampas', 'Água quente', 'Esgoto', 'Piso tátil', 'Reformado']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_social',
-    title: 'Características - Social',
-    fields: [
-      {
-        key: 'caracteristicas_social',
-        ghlId: 'PxxX7tGHbcTX1yEEQ1KW',
-        label: 'Social',
-        type: 'CHECKBOX',
-        options: ['Estar íntimo', 'Sacada lateral', 'Sacada frente', 'Varanda', 'Sacada fundo', 'Varanda gourmet']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_lazer',
-    title: 'Características - Lazer',
-    fields: [
-      {
-        key: 'caracteristicas_lazer',
-        ghlId: '2zouqMcrTHD6aB2S6ieZ',
-        label: 'Lazer',
-        type: 'CHECKBOX',
-        options: ['Adega', 'Bar', 'Deck', 'Piscina', 'Piscina aquecida', 'Academia', 'Salão de jogos', 'SPA', 'Área de lazer', 'Campo de futebol', 'Lazer no pilotis', 'Piscina infantil', 'Quadra esportiva', 'Salão de festas', 'Sauna', 'Vestiário', 'Área verde', 'Churrasqueira', 'Ofurô', 'Piscina privativa', 'Quadra de tênis', 'Salão gourmet', 'Sauna privativa']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_servicos',
-    title: 'Características - Serviços',
-    fields: [
-      {
-        key: 'caracteristicas_servicos',
-        ghlId: '3xVQ1rlannbhvRYYmNbu',
-        label: 'Serviços',
-        type: 'CHECKBOX',
-        options: ['Área de serviço', 'Banheiro empregada', 'Cozinha americana', 'Dep. privativo subsolo', 'Edícula', 'Espera para Automação', 'Garagem para barco', 'Guarita', 'Portaria 24h', 'Zelador', 'Automatizado', 'Copa', 'Cozinha independente', 'Despensa', 'Elevador de serviço', 'Fechadura eletrônica', 'Garagem Fechada', 'Hall', 'Rede de segurança', 'Banheiro auxiliar', 'Cozinha', 'Cozinha planejada', 'Dormitório empregada', 'Entrada de serviço', 'Gabinete', 'Gás natural', 'Lavanderia', 'Terraço']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_acabamento',
-    title: 'Características - Acabamento',
-    fields: [
-      {
-        key: 'caracteristicas_acabamento',
-        ghlId: 'P0aBwGNc88aQ0J3orL8O',
-        label: 'Acabamento',
-        type: 'CHECKBOX',
-        options: ['Assoalho', 'Contra-piso', 'Mármore', 'Porcelanato', 'Carpete', 'Granito', 'Piso frio', 'Taco', 'Carpete madeira', 'Laminado', 'Piso cerâmica', 'Vinílico']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_armarios',
-    title: 'Características - Armários',
-    fields: [
-      {
-        key: 'caracteristicas_armarios',
-        ghlId: 'VpCEYiNPFE3WHsEMLNGy',
-        label: 'Armários',
-        type: 'CHECKBOX',
-        options: ['Banheiro', 'Dormitórios', 'Closet', 'Sala', 'Cozinha', 'Área de Serviço']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_intima',
-    title: 'Características - Íntima',
-    fields: [
-      {
-        key: 'caracteristicas_intima',
-        ghlId: 'A76YO1r25jGTeufxwKTV',
-        label: 'Íntima',
-        type: 'CHECKBOX',
-        options: ['Suíte master', 'Roupeiro', 'Lavabo', 'Banheira']
-      },
-    ]
-  },
-  {
-    id: 'caracteristicas_destaques',
-    title: 'Características - Destaques',
-    fields: [
-      {
-        key: 'caracteristicas_destaques',
-        ghlId: 'AlmkB0Xeo62SUofpOuew',
-        label: 'Destaques',
-        type: 'CHECKBOX',
-        options: ['Aceita PET', 'Aquecimento solar', 'Box', 'Chuveiro a gás', 'Cooktop', 'Espera para split', 'Frente para clube', 'Interfone', 'Lareira', 'Microondas', 'Persiana elétrica', 'Quintal', 'Sol da manhã', 'Telefone', 'Ventilador de teto', 'Vista para lagoa', 'Vista para serra', 'Alarme', 'Ar condicionado', 'Calefação', 'Circuito para TV', 'Cortinas', 'Escritório', 'Frente para mar', 'Janela antirruído', 'Luz natural', 'Mobiliado', 'Perto do metrô', 'Rua silenciosa', 'Sol da tarde', 'TV a cabo', 'Vista livre', 'Vista para mar', 'Wi-Fi', 'Aquecimento central', 'Beira lago', 'Chuveiro elétrico', 'Cobertura coletiva', 'Decorado', 'Forno', 'Frente para praça', 'Jardim', 'Marina', 'Móveis planejados', 'Portão eletrônico', 'Sistema incêndio', 'Split', 'Varal', 'Vista para cidade', 'Vista panorâmica']
-      },
     ]
   },
 ];

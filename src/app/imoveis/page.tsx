@@ -105,6 +105,18 @@ function FieldInput({ field, value, onChange }: {
   const strVal = Array.isArray(value) ? '' : (value || '');
   const arrVal = Array.isArray(value) ? value : [];
 
+  if ((field as FieldDef & { readOnly?: boolean }).readOnly) {
+    return (
+      <input
+        className="field-input"
+        type="text"
+        value={strVal}
+        placeholder={field.label}
+        readOnly
+      />
+    );
+  }
+
   if (field.type === 'RADIO' && field.options) {
     return (
       <div className="radio-group">
