@@ -480,10 +480,26 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
           .filter((v) => v.trim() !== '');
         if (mapped.length === 0) continue;
         out[schemaSuffix] = mapped;
+
+        if (schemaSuffix === 'escolha_a_pretensao_do_negocio') {
+          const unique = Array.from(new Set(mapped.map((v) => v.toLowerCase())));
+          let plValue = unique[0];
+          if (unique.includes('venda') && unique.includes('aluguel')) plValue = 'venda_e_aluguel';
+          if (plValue) out['escolha_a_pretensao_do_negocio_pl'] = plValue;
+          out['escolha_a_pretensao_do_negocio_text'] = unique.join(', ');
+        }
       } else {
         const mapped = values.map(String).filter((v) => v.trim() !== '');
         if (mapped.length === 0) continue;
         out[schemaSuffix] = mapped;
+
+        if (schemaSuffix === 'escolha_a_pretensao_do_negocio') {
+          const unique = Array.from(new Set(mapped.map((v) => v.toLowerCase())));
+          let plValue = unique[0];
+          if (unique.includes('venda') && unique.includes('aluguel')) plValue = 'venda_e_aluguel';
+          if (plValue) out['escolha_a_pretensao_do_negocio_pl'] = plValue;
+          out['escolha_a_pretensao_do_negocio_text'] = unique.join(', ');
+        }
       }
       continue;
     }
