@@ -65,7 +65,6 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'numero_de_vagas_garagens_cobertas', ghlId: 'TnbZjfI2NxZx1KaEzHmW', label: 'Gar. Cobertas', type: 'NUMERICAL' },
       { key: 'numero_de_vagas_de_garagens_descobertas', ghlId: 'IBICWKEWycF5i1EbpnSq', label: 'Gar. Descobertas', type: 'NUMERICAL' },
       { key: 'numero_de_elevadores', ghlId: 'ejsLQ9w54RTrF2ggPXrv', label: 'Elevadores', type: 'NUMERICAL' },
-      { key: 'andar', ghlId: 'MFTdTm2kNXNqfdob9FRY', label: 'Andar', type: 'NUMERICAL' },
       { key: 'numero_de_andares', ghlId: 'JfPpfCUtUH78YVwyfp9t', label: 'Total de andares', type: 'NUMERICAL' },
     ]
   },
@@ -88,9 +87,8 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'valor_de_venda', ghlId: 'HnWcGsVB91q6MxYeBa2o', label: 'Preço de venda (R$)', type: 'MONETORY' },
       { key: 'valor_de_locacao', ghlId: 'Q5Pxq72EKf0Ndv1zyZjJ', label: 'Preço de locação (R$)', type: 'MONETORY' },
       { key: 'valor_do_iptu', ghlId: 'FhaCPvzDz6p0F9g6dvhh', label: 'Valor do IPTU (R$)', type: 'MONETORY' },
-      { key: 'pagamento_do_iptu', ghlId: '7ZKCURSrzLE2GAL8W8EN', label: 'Pagamento do IPTU', type: 'TEXT' },
+      { key: 'pagamento_do_iptu', ghlId: '7ZKCURSrzLE2GAL8W8EN', label: 'Pagamento do IPTU (PI)', type: 'RADIO', options: ['Mensal', 'Anual', 'Isento'] },
       { key: 'valor_do_condominio', ghlId: 'X83IBp8lOW4g7E5PeN9J', label: 'Valor do condomínio (R$)', type: 'MONETORY' },
-      { key: 'valor_temporada', ghlId: 'k1Zmj216KCUHngOcc6oG', label: 'Valor Temporada (R$)', type: 'MONETORY' },
       { key: 'temporada', ghlId: 'T88XCd8usC8jQLyurI0b', label: 'Temporada', type: 'TEXT' },
       { key: 'permuta', ghlId: 'zJLi1she6Sex8xGjyu6n', label: 'Permuta', type: 'TEXT' },
     ]
