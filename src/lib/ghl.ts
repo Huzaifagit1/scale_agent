@@ -571,8 +571,27 @@ export async function updateProperty(recordId: string, fields: Record<string, un
       text.includes('Escolha a pretensão do negócio') &&
       Object.prototype.hasOwnProperty.call(properties, 'escolha_a_pretensao_do_negocio')
     ) {
-      const retryProps = { ...properties };
-      delete (retryProps as Record<string, unknown>)['escolha_a_pretensao_do_negocio'];
+      const retryProps = { ...properties } as Record<string, unknown>;
+      const rawValue = retryProps['escolha_a_pretensao_do_negocio'];
+      delete retryProps['escolha_a_pretensao_do_negocio'];
+
+      const toArray = (value: unknown) => {
+        if (Array.isArray(value)) return value.map(String);
+        const str = String(value ?? '').trim();
+        if (!str) return [];
+        if (str.includes(',') || str.includes(';') || str.includes('|')) {
+          return str.split(/[,;|]/g).map((s) => s.trim()).filter(Boolean);
+        }
+        return [str];
+      };
+
+      const values = toArray(rawValue).map((v) => v.toLowerCase());
+      let plValue = values[0];
+      if (values.includes('venda') && values.includes('aluguel')) plValue = 'venda_e_aluguel';
+
+      // Retry using SINGLE_OPTIONS field if checkbox update is rejected
+      if (plValue) retryProps['escolha_a_pretensao_do_negocio_pl'] = plValue;
+
       const retryRes = await fetch(url, {
         method: 'PUT',
         headers: headers(),
