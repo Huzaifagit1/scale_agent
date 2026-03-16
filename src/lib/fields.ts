@@ -30,6 +30,13 @@ export const FORM_SECTIONS: Section[] = [
     ]
   },
   {
+    id: 'atualizacao',
+    title: 'Situação da atualização',
+    fields: [
+      { key: 'data_da_ultima_atualizacao', ghlId: 'K3bp7wQ0U1t1DtkQxeYt', label: 'Data da última atualização', type: 'DATE', readOnly: true },
+    ]
+  },
+  {
     id: 'localizacao',
     title: 'Localização',
     fields: [

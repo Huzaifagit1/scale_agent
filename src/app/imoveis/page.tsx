@@ -109,7 +109,7 @@ function FieldInput({ field, value, onChange }: {
     return (
       <input
         className="field-input"
-        type="text"
+        type={field.type === 'DATE' ? 'date' : 'text'}
         value={strVal}
         placeholder={field.label}
         readOnly
@@ -185,6 +185,18 @@ function FieldInput({ field, value, onChange }: {
         min="0"
         value={strVal}
         placeholder="0"
+        onChange={e => onChange(e.target.value)}
+      />
+    );
+  }
+
+  if (field.type === 'DATE') {
+    return (
+      <input
+        className="field-input"
+        type="date"
+        value={strVal}
+        placeholder={field.label}
         onChange={e => onChange(e.target.value)}
       />
     );
@@ -375,8 +387,11 @@ export default function ImoveisPage() {
     setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: true } : p));
 
     try {
+      const today = new Date();
+      const dateStr = today.toISOString().slice(0, 10);
+      const dataWithDate: PropertyData = { ...prop.data, data_da_ultima_atualizacao: dateStr };
       const method = prop.isNew || !prop.id ? 'POST' : 'PUT';
-      const ghlFields = mapPropertyToGhlFields(prop.data);
+      const ghlFields = mapPropertyToGhlFields(dataWithDate);
       const body = method === 'POST'
         ? { contactId, fields: ghlFields }
         : { recordId: prop.id, contactId, fields: ghlFields };
@@ -400,7 +415,7 @@ export default function ImoveisPage() {
         prop.id;
       console.log('[saveProperty] stored newId:', newId, 'from data.id:', data.id, 'result keys:', Object.keys(data.result || {}));
       setProperties(ps => ps.map((p, i) => i === index
-        ? { ...p, id: newId, isNew: false, isSaving: false, isDirty: false }
+        ? { ...p, id: newId, isNew: false, isSaving: false, isDirty: false, data: dataWithDate }
         : p
       ));
       addToast('success', '✓ Imóvel salvo com sucesso');

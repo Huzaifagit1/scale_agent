@@ -420,7 +420,7 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
   const HARDCODED: Record<string, string> = {
     // UI key → real GHL custom object field suffix
     referencia_do_imovel:                  'referncia',          // GHL has typo: referncia
-    situacao_da_disponibilidade_atualizacao: 'situacao_text',    // stored as situacao_text
+    situacao_da_disponibilidade_atualizacao: 'situacao_da_disponibilidade_atualizacao',
     permuta:                               'permuta_pl',         // single options field
     temporada:                             'temporada_pl',       // single options field
     escolha_a_pretensao_do_negocio:        'escolha_a_pretensao_do_negocio',
@@ -452,6 +452,7 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     area_construida:        'area_construida',
     area_dimensao_terreno:  'area_dimensao_terreno',
     area_util:              'area_util',
+    data_da_ultima_atualizacao: 'data_da_ultima_atualizacao',
     valor_de_venda:         'valor_de_venda',
     valor_de_locacao:       'valor_de_locacao',
     valor_do_condominio:    'valor_do_condominio',

@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     if (Object.keys(normalizedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
     }
+    normalizedFields['data_da_ultima_atualizacao'] = new Date().toISOString().slice(0, 10);
 
     const result = await createProperty(contactId, normalizedFields);
     const recordId = extractRecordId(result);
@@ -76,6 +77,7 @@ export async function PUT(req: NextRequest) {
     if (Object.keys(normalizedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
     }
+    normalizedFields['data_da_ultima_atualizacao'] = new Date().toISOString().slice(0, 10);
 
     try {
       const result = await updateProperty(recordId, normalizedFields);
