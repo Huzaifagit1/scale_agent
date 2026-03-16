@@ -539,6 +539,21 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
       continue;
     }
 
+    if (
+      (schemaSuffix === 'temporada_pl' || schemaSuffix === 'permuta_pl') &&
+      typeof rawValue === 'string'
+    ) {
+      const norm = normalizeLabel(rawValue);
+      if (norm === 'sim') {
+        out[schemaSuffix] = 'sim';
+        continue;
+      }
+      if (norm === 'nao') {
+        out[schemaSuffix] = 'nao';
+        continue;
+      }
+    }
+
     if (Array.isArray(rawValue)) {
       if (optionMap) {
         out[schemaSuffix] = rawValue
