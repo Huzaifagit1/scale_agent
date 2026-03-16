@@ -399,6 +399,16 @@ function mapCustomObjectToUi(
       out['escolha_a_pretensao_do_negocio'] = values;
     }
   }
+  const permutaPl = readString(properties['permuta_pl']);
+  if (permutaPl) {
+    const norm = normalizeLabel(permutaPl);
+    out['permuta'] = norm === 'sim' ? 'Sim' : norm === 'nao' ? 'Não' : permutaPl;
+  }
+  const temporadaPl = readString(properties['temporada_pl']);
+  if (temporadaPl) {
+    const norm = normalizeLabel(temporadaPl);
+    out['temporada'] = norm === 'sim' ? 'Sim' : norm === 'nao' ? 'Não' : temporadaPl;
+  }
   return out;
 }
 
@@ -411,7 +421,8 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     // UI key → real GHL custom object field suffix
     referencia_do_imovel:                  'referncia',          // GHL has typo: referncia
     situacao_da_disponibilidade_atualizacao: 'situacao_text',    // stored as situacao_text
-    permuta:                               'permuta_text',       // stored as permuta_text
+    permuta:                               'permuta_pl',         // single options field
+    temporada:                             'temporada_pl',       // single options field
     escolha_a_pretensao_do_negocio:        'escolha_a_pretensao_do_negocio',
     tipo_de_imovel:                        'tipo_de_imovel',
     categoria_do_imovel:                   'categoria_do_imovel',
