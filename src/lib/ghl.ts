@@ -444,20 +444,6 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
       continue;
     }
 
-    if (Array.isArray(rawValue)) {
-      if (optionMap) {
-        out[schemaSuffix] = rawValue
-          .map((v) => {
-            const labelKey = normalizeLabel(String(v));
-            return optionMap[labelKey] ?? v;
-          })
-          .map(String);
-      } else {
-        out[schemaSuffix] = rawValue.map(String);
-      }
-      continue;
-    }
-
     if (type === 'CHECKBOX') {
       const toArray = (value: unknown) => {
         if (Array.isArray(value)) return value.map(String);
@@ -500,6 +486,20 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
           if (plValue) out['escolha_a_pretensao_do_negocio_pl'] = plValue;
           out['escolha_a_pretensao_do_negocio_text'] = unique.join(', ');
         }
+      }
+      continue;
+    }
+
+    if (Array.isArray(rawValue)) {
+      if (optionMap) {
+        out[schemaSuffix] = rawValue
+          .map((v) => {
+            const labelKey = normalizeLabel(String(v));
+            return optionMap[labelKey] ?? v;
+          })
+          .map(String);
+      } else {
+        out[schemaSuffix] = rawValue.map(String);
       }
       continue;
     }
