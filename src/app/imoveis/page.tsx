@@ -19,6 +19,13 @@ type Property = {
 type Toast = { id: number; type: 'success' | 'error'; message: string };
 
 // ─── Helpers ─────────────────────────────────────────────
+function formatLocalDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function emptyProperty(): Property {
   return { isNew: true, isOpen: true, isSaving: false, isDirty: true, data: {} };
 }
@@ -106,11 +113,21 @@ function FieldInput({ field, value, onChange }: {
   const arrVal = Array.isArray(value) ? value : [];
 
   if ((field as FieldDef & { readOnly?: boolean }).readOnly) {
+    const displayValue =
+      field.type === 'DATE' && strVal
+        ? (() => {
+            const date = new Date(strVal);
+            if (!Number.isNaN(date.getTime())) {
+              return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+            return strVal;
+          })()
+        : strVal;
     return (
       <input
         className="field-input"
-        type={field.type === 'DATE' ? 'date' : 'text'}
-        value={strVal}
+        type="text"
+        value={displayValue}
         placeholder={field.label}
         readOnly
       />
@@ -387,8 +404,7 @@ export default function ImoveisPage() {
     setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: true } : p));
 
     try {
-      const today = new Date();
-      const dateStr = today.toISOString().slice(0, 10);
+      const dateStr = formatLocalDate(new Date());
       const dataWithDate: PropertyData = { ...prop.data, data_da_ultima_atualizacao: dateStr };
       const method = prop.isNew || !prop.id ? 'POST' : 'PUT';
       const ghlFields = mapPropertyToGhlFields(dataWithDate);
