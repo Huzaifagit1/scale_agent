@@ -22,7 +22,7 @@ export const FORM_SECTIONS: Section[] = [
     title: 'Pretensão do Negócio',
     fields: [
       { key: 'escolha_a_pretensao_do_negocio', ghlId: '3yU7SZgRWPPY64qIAejI', label: 'Pretensão do negócio', type: 'CHECKBOX', options: ['Venda', 'Aluguel'] },
-      { key: 'tipo_de_imovel', ghlId: 'ih9s4iEpVxFYaz1hdxfC', label: 'Tipo do imóvel', type: 'RADIO', options: ['Apartamento', 'Casa', 'Casa comercial', 'Chacara', 'Terreno', 'Sala', 'Salao', 'Ponto', 'Conjunto', 'Conj. comercial', 'Prédio comercial', 'Galpao', 'Galpão Industrial', 'Barracao', 'Armazem', 'Sitio', 'Fazenda', 'Haras', 'Flat', 'Kitnet', 'Duplex', 'Cobertura', 'Sobrado', 'Terreo(a)', 'Studio', 'Normal', 'Padrão'] },
+      { key: 'tipo_de_imovel', ghlId: 'ih9s4iEpVxFYaz1hdxfC', label: 'Tipo do imóvel', type: 'RADIO', options: ['Apartamento', 'Area', 'Armazem', 'Barracao', 'Casa', 'Casa comercial', 'Chacara', 'Conjunto', 'Fazenda', 'Galpao', 'Haras', 'Ponto', 'Prédio comercial', 'Sala', 'Sala comercial', 'Salao', 'Sitio', 'Terreno'] },
       { key: 'categoria_do_imovel', ghlId: 'hkUd2nSwCOKCQGl0HBM7', label: 'Categoria', type: 'RADIO', options: ['Cobertura', 'Duplex', 'Flat', 'Kitnet', 'Sobrado', 'Terreo(a)', 'Normal', 'Padrão'] },
       { key: 'finalidade', ghlId: 'KHnkDUqmqTBGMZG7OWlD', label: 'Finalidade', type: 'RADIO', options: ['Comercial', 'Industrial', 'Residencial', 'Rural', 'Temporada'] },
       { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Suspenso'] },
