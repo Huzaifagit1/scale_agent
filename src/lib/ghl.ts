@@ -547,6 +547,11 @@ export async function createProperty(contactId: string, fields: Record<string, u
 export async function updateProperty(recordId: string, fields: Record<string, unknown>) {
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
+  // GHL rejects updates for this checkbox field even with correct format.
+  // Skip it on UPDATE to allow other fields to save.
+  if (Object.prototype.hasOwnProperty.call(properties, 'escolha_a_pretensao_do_negocio')) {
+    delete (properties as Record<string, unknown>)['escolha_a_pretensao_do_negocio'];
+  }
   const sentKeys = Object.keys(properties);
   const debugPretensao = properties['escolha_a_pretensao_do_negocio'];
   // GHL PUT (confirmed working format):
