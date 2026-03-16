@@ -602,6 +602,22 @@ export async function updateProperty(recordId: string, fields: Record<string, un
       if (retryRes.ok) {
         try { return JSON.parse(retryText); } catch { return {}; }
       }
+
+      // Final fallback: use TEXT field only
+      const retryPropsText = { ...retryProps } as Record<string, unknown>;
+      delete retryPropsText['escolha_a_pretensao_do_negocio_pl'];
+      const textValue = values.join(', ');
+      if (textValue) retryPropsText['escolha_a_pretensao_do_negocio_text'] = textValue;
+      const retryResText = await fetch(url, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ properties: retryPropsText }),
+      });
+      const retryTextText = await retryResText.text();
+      log('updateProperty-retry-text', retryResText.status, retryTextText);
+      if (retryResText.ok) {
+        try { return JSON.parse(retryTextText); } catch { return {}; }
+      }
     }
 
     throw new Error(
