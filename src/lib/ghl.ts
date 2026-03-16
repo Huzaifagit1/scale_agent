@@ -363,17 +363,26 @@ function mapCustomObjectToUi(
   }
   // Prefer PL/TEXT fields to derive checkbox UI for Pretensão do negócio,
   // because updates skip the checkbox field in GHL (it can become stale).
-  const pl = typeof properties['escolha_a_pretensao_do_negocio_pl'] === 'string'
-    ? String(properties['escolha_a_pretensao_do_negocio_pl'])
-    : undefined;
-  const text = typeof properties['escolha_a_pretensao_do_negocio_text'] === 'string'
-    ? String(properties['escolha_a_pretensao_do_negocio_text'])
-    : undefined;
+  const readString = (value: unknown): string | undefined => {
+    if (typeof value === 'string') return value;
+    if (isObject(value)) {
+      const key = getStringField(value, 'key');
+      if (key) return key;
+      const val = getStringField(value, 'value');
+      if (val) return val;
+      const label = getStringField(value, 'label');
+      if (label) return label;
+    }
+    return undefined;
+  };
+  const pl = readString(properties['escolha_a_pretensao_do_negocio_pl']);
+  const text = readString(properties['escolha_a_pretensao_do_negocio_text']);
   if (pl || text) {
     let values: string[] = [];
-    if (pl === 'venda_e_aluguel') values = ['Venda', 'Aluguel'];
-    else if (pl === 'venda') values = ['Venda'];
-    else if (pl === 'aluguel') values = ['Aluguel'];
+    const plNorm = pl ? normalizeLabel(pl) : '';
+    if (plNorm === 'venda e aluguel' || plNorm === 'venda_e_aluguel') values = ['Venda', 'Aluguel'];
+    else if (plNorm === 'venda') values = ['Venda'];
+    else if (plNorm === 'aluguel') values = ['Aluguel'];
     else if (text) {
       values = text
         .split(/[,;|]/g)
