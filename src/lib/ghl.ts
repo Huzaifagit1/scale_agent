@@ -361,6 +361,35 @@ function mapCustomObjectToUi(
 
     out[uiKey] = rawValue as unknown;
   }
+  // Prefer PL/TEXT fields to derive checkbox UI for Pretensão do negócio,
+  // because updates skip the checkbox field in GHL (it can become stale).
+  const pl = typeof properties['escolha_a_pretensao_do_negocio_pl'] === 'string'
+    ? String(properties['escolha_a_pretensao_do_negocio_pl'])
+    : undefined;
+  const text = typeof properties['escolha_a_pretensao_do_negocio_text'] === 'string'
+    ? String(properties['escolha_a_pretensao_do_negocio_text'])
+    : undefined;
+  if (pl || text) {
+    let values: string[] = [];
+    if (pl === 'venda_e_aluguel') values = ['Venda', 'Aluguel'];
+    else if (pl === 'venda') values = ['Venda'];
+    else if (pl === 'aluguel') values = ['Aluguel'];
+    else if (text) {
+      values = text
+        .split(/[,;|]/g)
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .map((v) => {
+          const norm = normalizeLabel(v);
+          if (norm === 'venda') return 'Venda';
+          if (norm === 'aluguel') return 'Aluguel';
+          return v;
+        });
+    }
+    if (values.length > 0) {
+      out['escolha_a_pretensao_do_negocio'] = values;
+    }
+  }
   return out;
 }
 
