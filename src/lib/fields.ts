@@ -25,7 +25,7 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'tipo_de_imovel', ghlId: 'ih9s4iEpVxFYaz1hdxfC', label: 'Tipo do imóvel', type: 'RADIO', options: ['Apartamento', 'Casa', 'Casa comercial', 'Chacara', 'Terreno', 'Sala', 'Salao', 'Ponto', 'Conjunto', 'Conj. comercial', 'Prédio comercial', 'Galpao', 'Galpão Industrial', 'Barracao', 'Armazem', 'Sitio', 'Fazenda', 'Haras', 'Flat', 'Kitnet', 'Duplex', 'Cobertura', 'Sobrado', 'Terreo(a)', 'Studio', 'Normal', 'Padrão'] },
       { key: 'categoria_do_imovel', ghlId: 'hkUd2nSwCOKCQGl0HBM7', label: 'Categoria', type: 'RADIO', options: ['Cobertura', 'Duplex', 'Flat', 'Kitnet', 'Sobrado', 'Terreo(a)', 'Normal', 'Padrão'] },
       { key: 'finalidade', ghlId: 'KHnkDUqmqTBGMZG7OWlD', label: 'Finalidade', type: 'RADIO', options: ['Comercial', 'Industrial', 'Residencial', 'Rural', 'Temporada'] },
-      { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Em avaliação', 'Avaliado', 'Em validação', 'Suspenso'] },
+      { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Suspenso'] },
       { key: 'referencia_do_imovel', ghlId: 'W5rMkS4725rkUH6YPfUW', label: 'Referência', type: 'TEXT', readOnly: true },
     ]
   },
@@ -41,7 +41,7 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'bairro_oficial_endereco', ghlId: 'HakqR4XMZe4uP2LNpfw1', label: 'Bairro Oficial', type: 'TEXT' },
       { key: 'cidade_endereco', ghlId: '0Uvqnpd9UYmWz89bpEmv', label: 'Cidade', type: 'TEXT' },
       { key: 'uf_endereco', ghlId: 'HC2HaCwWHqP4Otws3lTL', label: 'UF', type: 'TEXT' },
-      { key: 'pais_endereco', ghlId: '9UyIF1o3vxuAnSvPRI1G', label: 'País', type: 'TEXT' },
+      // País removed (always Brazil)
       { key: 'regiao_endereco', ghlId: 'Q2Sv6T5P640VbLgmnkeA', label: 'Região', type: 'TEXT' },
       { key: 'quadra_endereco', ghlId: '3Hb8YSAALYe2H5FV7uJg', label: 'Quadra', type: 'TEXT' },
       { key: 'lote_endereco', ghlId: '4MniFx7ORQ1XfxweZXnK', label: 'Lote', type: 'TEXT' },
@@ -90,8 +90,8 @@ export const FORM_SECTIONS: Section[] = [
       { key: 'valor_do_iptu', ghlId: 'FhaCPvzDz6p0F9g6dvhh', label: 'Valor do IPTU (R$)', type: 'MONETORY' },
       { key: 'pagamento_do_iptu', ghlId: '7ZKCURSrzLE2GAL8W8EN', label: 'Pagamento do IPTU (PI)', type: 'RADIO', options: ['Mensal', 'Anual', 'Isento'] },
       { key: 'valor_do_condominio', ghlId: 'X83IBp8lOW4g7E5PeN9J', label: 'Valor do condomínio (R$)', type: 'MONETORY' },
-      { key: 'temporada', ghlId: 'T88XCd8usC8jQLyurI0b', label: 'Temporada', type: 'TEXT' },
-      { key: 'permuta', ghlId: 'zJLi1she6Sex8xGjyu6n', label: 'Permuta', type: 'TEXT' },
+      { key: 'temporada', ghlId: 'T88XCd8usC8jQLyurI0b', label: 'Temporada', type: 'RADIO', options: ['Sim', 'Não'] },
+      { key: 'permuta', ghlId: 'zJLi1she6Sex8xGjyu6n', label: 'Permuta', type: 'RADIO', options: ['Sim', 'Não'] },
     ]
   },
 ];
