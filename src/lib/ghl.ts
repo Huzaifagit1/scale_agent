@@ -563,6 +563,29 @@ export async function createProperty(contactId: string, fields: Record<string, u
 export async function updateProperty(recordId: string, fields: Record<string, unknown>) {
   const fieldKeys = Object.keys(fields);
   const properties = await toPropertiesObject(fields);
+  // Ensure PL and text fields are populated when checkbox is present in UI
+  const rawPretensao = (fields as Record<string, unknown>)['escolha_a_pretensao_do_negocio'];
+  if (rawPretensao !== undefined) {
+    const toArray = (value: unknown) => {
+      if (Array.isArray(value)) return value.map(String);
+      const str = String(value ?? '').trim();
+      if (!str) return [];
+      if (str.includes(',') || str.includes(';') || str.includes('|')) {
+        return str.split(/[,;|]/g).map((s) => s.trim()).filter(Boolean);
+      }
+      return [str];
+    };
+    const values = toArray(rawPretensao)
+      .map((v) => normalizeLabel(String(v)))
+      .filter(Boolean);
+    if (values.length > 0) {
+      const unique = Array.from(new Set(values));
+      let plValue = unique[0];
+      if (unique.includes('venda') && unique.includes('aluguel')) plValue = 'venda_e_aluguel';
+      properties['escolha_a_pretensao_do_negocio_pl'] = plValue;
+      properties['escolha_a_pretensao_do_negocio_text'] = unique.join(', ');
+    }
+  }
   // GHL rejects updates for this checkbox field even with correct format.
   // Skip it on UPDATE to allow other fields to save.
   if (Object.prototype.hasOwnProperty.call(properties, 'escolha_a_pretensao_do_negocio')) {
