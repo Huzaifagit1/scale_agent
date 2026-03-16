@@ -625,6 +625,29 @@ export async function updateProperty(recordId: string, fields: Record<string, un
       }
     }
 
+    if (res.status === 422) {
+      const match = text.match(/updates to (.+?) due to/i);
+      if (match?.[1]) {
+        const fieldName = normalizeLabel(match[1]);
+        const fieldMap = await getFieldMap();
+        const suffix = fieldMap.customNameToSuffix[fieldName];
+        if (suffix && Object.prototype.hasOwnProperty.call(properties, suffix)) {
+          const retryProps = { ...properties } as Record<string, unknown>;
+          delete retryProps[suffix];
+          const retryRes = await fetch(url, {
+            method: 'PUT',
+            headers: headers(),
+            body: JSON.stringify({ properties: retryProps }),
+          });
+          const retryText = await retryRes.text();
+          log('updateProperty-retry-skip', retryRes.status, retryText);
+          if (retryRes.ok) {
+            try { return JSON.parse(retryText); } catch { return {}; }
+          }
+        }
+      }
+    }
+
     throw new Error(
       `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)} escolha_a_pretensao_do_negocio=${JSON.stringify(debugPretensao)}: ${text}`
     );
