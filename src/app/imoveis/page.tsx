@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
+import { hasActivePropertyStatus } from '@/lib/property-status';
 
 // ─── Types ───────────────────────────────────────────────
 type PropertyData = Record<string, string | string[]>;
@@ -319,20 +320,27 @@ export default function ImoveisPage() {
         setContact(data.contact);
         
         // First try to load from custom object records (properties)
-        let loaded: Property[] = (data.properties || []).map((rec: Record<string, unknown>) => ({
-          id: rec.id as string,
-          isNew: false,
-          isOpen: false,
-          isSaving: false,
-          isDirty: false,
-          data: (rec.properties || rec) as PropertyData,
-        }));
+        let loaded: Property[] = (data.properties || [])
+          .filter((rec: Record<string, unknown>) =>
+            hasActivePropertyStatus((rec.properties || rec) as Record<string, unknown>)
+          )
+          .map((rec: Record<string, unknown>) => ({
+            id: rec.id as string,
+            isNew: false,
+            isOpen: false,
+            isSaving: false,
+            isDirty: false,
+            data: (rec.properties || rec) as PropertyData,
+          }));
         
         // Legacy contact customFields: merge into an existing record if it matches,
         // otherwise show it as a separate (new) property.
         if (data.contact?.customFields?.length > 0) {
           const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
-          if (Object.keys(customFieldsData).length > 0) {
+          if (
+            Object.keys(customFieldsData).length > 0 &&
+            hasActivePropertyStatus(customFieldsData as Record<string, unknown>)
+          ) {
             const signature = computeLegacySignature(customFieldsData);
             const matchIndex = loaded.findIndex((p) => computeLegacySignature(p.data) === signature);
             if (matchIndex >= 0) {

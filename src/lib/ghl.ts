@@ -1,6 +1,7 @@
 import { FORM_SECTIONS } from './fields';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { hasActivePropertyStatus } from './property-status';
 
 const GHL_BASE = 'https://services.leadconnectorhq.com';
 const API_KEY = process.env.GHL_API_TOKEN!;
@@ -315,6 +316,9 @@ export async function getPropertiesForContact(contactId: string) {
             fieldMap.suffixToUi,
             fieldMap.optionKeyToLabelBySuffix
           );
+          if (!hasActivePropertyStatus(record.properties)) {
+            return null;
+          }
         }
         return record;
       } catch {
