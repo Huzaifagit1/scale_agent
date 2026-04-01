@@ -31,23 +31,6 @@ function emptyProperty(): Property {
   return { isNew: true, isOpen: true, isSaving: false, isDirty: true, data: {} };
 }
 
-function normalizeFieldValue(value?: string | string[]) {
-  return String(Array.isArray(value) ? value.join(' ') : value || '').trim().toLowerCase();
-}
-
-function computeLegacySignature(data: PropertyData) {
-  const keys = [
-    'referencia',
-    'endereco',
-    'cidade_endereco',
-    'cep',
-    'numero',
-    'bairro_oficial',
-    'bairro_commercial',
-  ];
-  return keys.map((k) => normalizeFieldValue(data[k])).join('|');
-}
-
 function getPropertyLabel(p: Property, index: number): string {
   const addr = [
     p.data['cidade_endereco'],
@@ -62,28 +45,6 @@ function getPropertyMeta(p: Property): string {
   if (p.data['tipo_de_imovel']) parts.push(String(p.data['tipo_de_imovel']));
   if (p.data['numero_de_dormitorios']) parts.push(`${p.data['numero_de_dormitorios']} dorm.`);
   return parts.join(' · ') || (p.isNew ? 'Novo imóvel' : 'Imóvel cadastrado');
-}
-
-function mapCustomFieldsToProperty(customFields: Array<{ id: string; value: string }>): PropertyData {
-  const data: PropertyData = {};
-  
-  // Build a map of ghlId -> field key from FORM_SECTIONS
-  const ghlIdToKey: Record<string, string> = {};
-  for (const section of FORM_SECTIONS) {
-    for (const field of section.fields) {
-      ghlIdToKey[field.ghlId] = field.key;
-    }
-  }
-  
-  // Map custom fields to property data
-  for (const cf of customFields) {
-    const key = ghlIdToKey[cf.id];
-    if (key && cf.value) {
-      data[key] = cf.value;
-    }
-  }
-  
-  return data;
 }
 
 function mapPropertyToGhlFields(data: PropertyData): Record<string, string | string[]> {
@@ -332,33 +293,7 @@ export default function ImoveisPage() {
             isDirty: false,
             data: (rec.properties || rec) as PropertyData,
           }));
-        
-        // Legacy contact customFields: merge into an existing record if it matches,
-        // otherwise show it as a separate (new) property.
-        if (data.contact?.customFields?.length > 0) {
-          const customFieldsData = mapCustomFieldsToProperty(data.contact.customFields);
-          if (
-            Object.keys(customFieldsData).length > 0 &&
-            hasActivePropertyStatus(customFieldsData as Record<string, unknown>)
-          ) {
-            const signature = computeLegacySignature(customFieldsData);
-            const matchIndex = loaded.findIndex((p) => computeLegacySignature(p.data) === signature);
-            if (matchIndex >= 0) {
-              const match = loaded[matchIndex];
-              loaded[matchIndex] = { ...match, data: { ...customFieldsData, ...match.data } };
-            } else {
-              loaded = [{
-                id: undefined,
-                isNew: true,
-                isOpen: true,
-                isSaving: false,
-                isDirty: true,
-                data: customFieldsData,
-              }, ...loaded];
-            }
-          }
-        }
-        
+
         setProperties(loaded.length > 0 ? loaded : [emptyProperty()]);
       })
       .catch(() => setError('Erro ao carregar dados.'))
