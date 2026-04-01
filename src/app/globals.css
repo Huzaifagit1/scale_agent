@@ -274,22 +274,24 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
 .save-bar {
   position: sticky;
   bottom: 0;
-  background: var(--warm-white);
-  border-top: 1px solid var(--border);
-  padding: 16px 0;
-  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(to top, rgba(248, 245, 239, 0.96), rgba(248, 245, 239, 0.82));
+  border-top: 1px solid rgba(210, 198, 179, 0.7);
+  padding: 18px 0 10px;
+  margin-top: 28px;
   z-index: 10;
+  backdrop-filter: blur(10px);
 }
 .btn-save {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 100%;
+  min-width: 260px;
+  max-width: 100%;
   padding: 16px 32px;
-  background: var(--charcoal);
-  color: #fff;
-  border: none;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
@@ -298,10 +300,43 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
   transition: all 0.2s;
   letter-spacing: 0.02em;
 }
-.btn-save:hover { background: var(--dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-save.dirty {
+  width: 100%;
+  background: var(--charcoal);
+  color: #fff;
+  border-color: var(--charcoal);
+  box-shadow: var(--shadow-sm);
+}
+.btn-save.dirty:hover {
+  background: var(--dark);
+  border-color: var(--dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.btn-save.idle {
+  min-width: 220px;
+  background: #fff;
+  color: var(--dark);
+  border-color: #d9ccb9;
+  box-shadow: 0 10px 24px rgba(40, 31, 16, 0.06);
+}
+.btn-save.idle:disabled {
+  background: #fff;
+  color: var(--dark);
+  border-color: #d9ccb9;
+  box-shadow: 0 10px 24px rgba(40, 31, 16, 0.06);
+  opacity: 1;
+  cursor: default;
+}
 .btn-save:active { transform: translateY(0); }
-.btn-save:disabled { background: #999; cursor: not-allowed; transform: none; }
-.btn-save.loading { background: #555; }
+.btn-save:disabled { transform: none; }
+.btn-save.loading {
+  width: 100%;
+  background: #555;
+  color: #fff;
+  border-color: #555;
+  cursor: wait;
+ }
 
 /* State screens */
 .state-screen {

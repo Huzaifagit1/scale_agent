@@ -410,6 +410,8 @@ export default function ImoveisPage() {
   );
 
   const dirtyCount = properties.filter(p => p.isDirty).length;
+  const isSavingAny = properties.some(p => p.isSaving);
+  const saveButtonClass = isSavingAny ? 'btn-save loading' : dirtyCount > 0 ? 'btn-save dirty' : 'btn-save idle';
 
   return (
     <>
@@ -453,11 +455,11 @@ export default function ImoveisPage() {
           {properties.length > 0 && (
             <div className="save-bar">
               <button
-                className={`btn-save${dirtyCount === 0 ? '' : ' loading'}`}
+                className={saveButtonClass}
                 onClick={saveAll}
-                disabled={properties.some(p => p.isSaving)}
+                disabled={isSavingAny || dirtyCount === 0}
               >
-                {properties.some(p => p.isSaving)
+                {isSavingAny
                   ? <><span className="spinner" /> Salvando...</>
                   : dirtyCount > 0
                     ? `💾 Salvar ${dirtyCount} imóve${dirtyCount === 1 ? 'l' : 'is'}`
