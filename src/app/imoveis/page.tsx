@@ -294,7 +294,7 @@ export default function ImoveisPage() {
             data: (rec.properties || rec) as PropertyData,
           }));
 
-        setProperties(loaded.length > 0 ? loaded : [emptyProperty()]);
+        setProperties(loaded);
       })
       .catch(() => setError('Erro ao carregar dados.'))
       .finally(() => setLoading(false));
@@ -443,36 +443,42 @@ export default function ImoveisPage() {
             <span className="properties-count">{properties.length} imóve{properties.length === 1 ? 'l' : 'is'}</span>
           </div>
 
-          {properties.map((prop, i) => (
-            <PropertyForm
-              key={prop.id || `new-${i}`}
-              property={prop}
-              index={i}
-              onUpdate={data => updateProperty(i, data)}
-              onDelete={() => deleteProperty(i)}
-              onSave={() => saveProperty(i)}
-            />
-          ))}
+          {properties.length === 0 ? (
+            <div className="properties-empty">Nenhum imóvel encontrado.</div>
+          ) : (
+            properties.map((prop, i) => (
+              <PropertyForm
+                key={prop.id || `new-${i}`}
+                property={prop}
+                index={i}
+                onUpdate={data => updateProperty(i, data)}
+                onDelete={() => deleteProperty(i)}
+                onSave={() => saveProperty(i)}
+              />
+            ))
+          )}
 
           <button className="btn-add-property" onClick={addProperty}>
             <span className="icon">+</span>
             Adicionar outro imóvel
           </button>
 
-          <div className="save-bar">
-            <button
-              className={`btn-save${dirtyCount === 0 ? '' : ' loading'}`}
-              onClick={saveAll}
-              disabled={properties.some(p => p.isSaving)}
-            >
-              {properties.some(p => p.isSaving)
-                ? <><span className="spinner" /> Salvando...</>
-                : dirtyCount > 0
-                  ? `💾 Salvar ${dirtyCount} imóve${dirtyCount === 1 ? 'l' : 'is'}`
-                  : '✓ Tudo salvo'
-              }
-            </button>
-          </div>
+          {properties.length > 0 && (
+            <div className="save-bar">
+              <button
+                className={`btn-save${dirtyCount === 0 ? '' : ' loading'}`}
+                onClick={saveAll}
+                disabled={properties.some(p => p.isSaving)}
+              >
+                {properties.some(p => p.isSaving)
+                  ? <><span className="spinner" /> Salvando...</>
+                  : dirtyCount > 0
+                    ? `💾 Salvar ${dirtyCount} imóve${dirtyCount === 1 ? 'l' : 'is'}`
+                    : '✓ Tudo salvo'
+                }
+              </button>
+            </div>
+          )}
         </div>
       </main>
 
