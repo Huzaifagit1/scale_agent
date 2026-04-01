@@ -27,10 +27,6 @@ function formatLocalDate(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function emptyProperty(): Property {
-  return { isNew: true, isOpen: true, isSaving: false, isDirty: true, data: {} };
-}
-
 function getPropertyLabel(p: Property, index: number): string {
   const addr = [
     p.data['cidade_endereco'],
@@ -306,10 +302,6 @@ export default function ImoveisPage() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000);
   }, []);
 
-  const addProperty = () => {
-    setProperties(ps => [...ps, emptyProperty()]);
-  };
-
   const updateProperty = (index: number, data: PropertyData) => {
     setProperties(ps => ps.map((p, i) => {
       if (i !== index) return p;
@@ -457,11 +449,6 @@ export default function ImoveisPage() {
               />
             ))
           )}
-
-          <button className="btn-add-property" onClick={addProperty}>
-            <span className="icon">+</span>
-            Adicionar outro imóvel
-          </button>
 
           {properties.length > 0 && (
             <div className="save-bar">
