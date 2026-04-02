@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
-import { hasActivePropertyStatus } from '@/lib/property-status';
+import { hasActivePropertyStatus, PROPERTY_STATUS_KEY } from '@/lib/property-status';
 
 // ─── Types ───────────────────────────────────────────────
 type PropertyData = Record<string, string | string[]>;
@@ -194,12 +194,16 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
   index: number;
   onUpdate: (data: PropertyData) => void;
   onDelete: () => void;
-  onSave: () => void;
+  onSave: (nextData?: PropertyData) => void;
 }) {
   const toggle = () => onUpdate({ ...property.data, __open: property.isOpen ? '' : '1' });
 
   const setField = (key: string, val: string | string[]) => {
-    onUpdate({ ...property.data, [key]: val });
+    const nextData = { ...property.data, [key]: val };
+    onUpdate(nextData);
+    if (key === PROPERTY_STATUS_KEY) {
+      onSave(nextData);
+    }
   };
 
   return (
@@ -217,7 +221,7 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
             <button
               className="btn-icon"
               title="Salvar este imóvel"
-              onClick={onSave}
+              onClick={() => onSave()}
               disabled={property.isSaving}
               style={{ color: '#1A6B3C', borderColor: '#A8D5B5' }}
             >
@@ -332,15 +336,17 @@ export default function ImoveisPage() {
       .catch(() => addToast('error', 'Erro ao remover imóvel'));
   };
 
-  const saveProperty = async (index: number) => {
+  const saveProperty = async (index: number, overrideData?: PropertyData) => {
     const prop = properties[index];
     if (!contactId) return;
+    if (!prop) return;
 
     setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: true } : p));
 
     try {
       const dateStr = formatLocalDate(new Date());
-      const dataWithDate: PropertyData = { ...prop.data, data_da_ultima_atualizacao: dateStr };
+      const sourceData = overrideData ?? prop.data;
+      const dataWithDate: PropertyData = { ...sourceData, data_da_ultima_atualizacao: dateStr };
       const method = prop.isNew || !prop.id ? 'POST' : 'PUT';
       const ghlFields = mapPropertyToGhlFields(dataWithDate);
       const body = method === 'POST'
@@ -365,6 +371,12 @@ export default function ImoveisPage() {
         data.result?.data?.id ||
         prop.id;
       console.log('[saveProperty] stored newId:', newId, 'from data.id:', data.id, 'result keys:', Object.keys(data.result || {}));
+      if (!hasActivePropertyStatus(dataWithDate as Record<string, unknown>)) {
+        setProperties(ps => ps.filter((_, i) => i !== index));
+        addToast('success', '✓ Imóvel atualizado');
+        return;
+      }
+
       setProperties(ps => ps.map((p, i) => i === index
         ? { ...p, id: newId, isNew: false, isSaving: false, isDirty: false, data: dataWithDate }
         : p
@@ -447,7 +459,7 @@ export default function ImoveisPage() {
                 index={i}
                 onUpdate={data => updateProperty(i, data)}
                 onDelete={() => deleteProperty(i)}
-                onSave={() => saveProperty(i)}
+                onSave={data => saveProperty(i, data)}
               />
             ))
           )}

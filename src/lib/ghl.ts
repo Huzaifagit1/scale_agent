@@ -1,7 +1,7 @@
 import { FORM_SECTIONS } from './fields';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { hasActivePropertyStatus } from './property-status';
+import { hasActivePropertyStatus, normalizePropertyStatus, PROPERTY_STATUS_KEY } from './property-status';
 
 const GHL_BASE = 'https://services.leadconnectorhq.com';
 const API_KEY = process.env.GHL_API_TOKEN!;
@@ -760,7 +760,50 @@ export async function updateProperty(recordId: string, fields: Record<string, un
       `Failed to update (${res.status}) keys=${JSON.stringify(fieldKeys)} sentKeys=${JSON.stringify(sentKeys)} escolha_a_pretensao_do_negocio=${JSON.stringify(debugPretensao)}: ${text}`
     );
   }
-  try { return JSON.parse(text); } catch { return {}; }
+  let parsed: Record<string, unknown> = {};
+  try { parsed = JSON.parse(text); } catch { /* empty */ }
+
+  if (Object.prototype.hasOwnProperty.call(fields, PROPERTY_STATUS_KEY)) {
+    const verifyRes = await fetch(`${GHL_BASE}/objects/${getObjectId()}/records/${recordId}`, {
+      headers: headers(),
+    });
+    const verifyText = await verifyRes.text();
+    log('verifyUpdatedRecord', verifyRes.status, verifyText);
+
+    if (!verifyRes.ok) {
+      throw new Error(`Updated record could not be reloaded for verification (${verifyRes.status}).`);
+    }
+
+    try {
+      const verifyData = JSON.parse(verifyText);
+      const verifyRecord = verifyData.record || verifyData;
+      const rawProperties = isObject(verifyRecord?.properties) ? verifyRecord.properties : null;
+      if (!rawProperties) {
+        throw new Error('Updated record verification returned no properties.');
+      }
+
+      const fieldMap = await getFieldMap();
+      const uiProperties = mapCustomObjectToUi(
+        rawProperties,
+        fieldMap.suffixToUi,
+        fieldMap.optionKeyToLabelBySuffix
+      );
+
+      const expectedStatus = normalizePropertyStatus(fields[PROPERTY_STATUS_KEY]);
+      const actualStatus = normalizePropertyStatus(uiProperties[PROPERTY_STATUS_KEY]);
+
+      if (expectedStatus && actualStatus !== expectedStatus) {
+        throw new Error(
+          `Status update did not persist. Expected "${String(fields[PROPERTY_STATUS_KEY])}", but GHL returned "${String(uiProperties[PROPERTY_STATUS_KEY] ?? '')}".`
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) throw error;
+      throw new Error('Updated record verification failed.');
+    }
+  }
+
+  return parsed;
 }
 
 export async function deleteProperty(recordId: string) {
