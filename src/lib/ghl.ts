@@ -187,13 +187,21 @@ async function getFieldMap(): Promise<FieldMap> {
 
         if (field.name) {
           const normalizedName = normalizeLabel(field.name);
-          const uiKey = contactNameToUi.get(normalizedName);
+          const contactUiKey = contactNameToUi.get(normalizedName);
+          const uiKey =
+            contactUiKey &&
+            isTypeCompatible(FIELD_TYPE_BY_KEY[contactUiKey], (field as any).dataType) &&
+            !uiToSuffix[contactUiKey]
+              ? contactUiKey
+              : undefined;
           if (uiKey) {
             uiToSuffix[uiKey] = suffix;
             suffixToUi[suffix] = uiKey;
           } else {
             const candidates = uiLabelToKeys.get(normalizedName) ?? [];
-            const match = candidates.find((c) => isTypeCompatible(c.type, (field as any).dataType));
+            const match = candidates.find(
+              (c) => isTypeCompatible(c.type, (field as any).dataType) && !uiToSuffix[c.key]
+            );
             if (match) {
               uiToSuffix[match.key] = suffix;
               suffixToUi[suffix] = match.key;
@@ -364,6 +372,15 @@ function mapCustomObjectToUi(
     }
 
     out[uiKey] = rawValue as unknown;
+  }
+  if (Object.prototype.hasOwnProperty.call(properties, PROPERTY_STATUS_KEY)) {
+    const rawStatus = properties[PROPERTY_STATUS_KEY];
+    const statusMap = optionKeyToLabelBySuffix[PROPERTY_STATUS_KEY];
+    if (typeof rawStatus === 'string' && statusMap?.[rawStatus]) {
+      out[PROPERTY_STATUS_KEY] = statusMap[rawStatus];
+    } else {
+      out[PROPERTY_STATUS_KEY] = rawStatus as unknown;
+    }
   }
   // Prefer PL/TEXT fields to derive checkbox UI for Pretensão do negócio,
   // because updates skip the checkbox field in GHL (it can become stale).
