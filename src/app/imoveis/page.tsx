@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
 import { hasActivePropertyStatus, PROPERTY_STATUS_KEY } from '@/lib/property-status';
@@ -18,6 +18,8 @@ type Property = {
 };
 
 type Toast = { id: number; type: 'success' | 'error'; message: string };
+
+const EXIT_CONFIRMATION_MESSAGE = 'As informações das propriedades estão corretas?';
 
 // ─── Helpers ─────────────────────────────────────────────
 function formatLocalDate(date: Date) {
@@ -269,6 +271,9 @@ export default function ImoveisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const propertiesRef = useRef<Property[]>([]);
+  const pendingExitConfirmationRef = useRef(false);
+  const exitSyncStartedRef = useRef(false);
 
   // ── Load contact + existing properties ──
   useEffect(() => {
@@ -305,6 +310,80 @@ export default function ImoveisPage() {
     setToasts(t => [...t, { id, type, message }]);
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000);
   }, []);
+
+  useEffect(() => {
+    propertiesRef.current = properties;
+  }, [properties]);
+
+  const syncExitConfirmation = useCallback(() => {
+    if (exitSyncStartedRef.current) return;
+
+    const payloadProperties = propertiesRef.current
+      .filter((property): property is Property & { id: string } => Boolean(property.id))
+      .map(property => ({
+        recordId: property.id,
+        fields: mapPropertyToGhlFields(property.data),
+      }));
+
+    if (payloadProperties.length === 0) return;
+
+    exitSyncStartedRef.current = true;
+
+    const payload = JSON.stringify({ properties: payloadProperties });
+
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const queued = navigator.sendBeacon(
+        '/api/properties/confirm-exit',
+        new Blob([payload], { type: 'application/json' })
+      );
+      if (queued) return;
+    }
+
+    void fetch('/api/properties/confirm-exit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (propertiesRef.current.filter(property => property.id).length === 0) return;
+
+      pendingExitConfirmationRef.current = true;
+      event.preventDefault();
+      event.returnValue = EXIT_CONFIRMATION_MESSAGE;
+      return EXIT_CONFIRMATION_MESSAGE;
+    };
+
+    const handlePageHide = () => {
+      if (!pendingExitConfirmationRef.current) return;
+      syncExitConfirmation();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (pendingExitConfirmationRef.current) {
+          syncExitConfirmation();
+        }
+        return;
+      }
+
+      pendingExitConfirmationRef.current = false;
+      exitSyncStartedRef.current = false;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [syncExitConfirmation]);
 
   const updateProperty = (index: number, data: PropertyData) => {
     setProperties(ps => ps.map((p, i) => {
