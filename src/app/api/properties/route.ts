@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createProperty, updateProperty, deleteProperty, getPropertiesForContact } from '@/lib/ghl';
 import { FORM_SECTIONS } from '@/lib/fields';
 
-function formatLocalDate(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 function normalizeIncomingFields(fields: unknown): Record<string, unknown> {
   if (!fields || typeof fields !== 'object') return {};
 
@@ -59,7 +52,6 @@ export async function POST(req: NextRequest) {
     if (Object.keys(normalizedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
     }
-    normalizedFields['data_da_ultima_atualizacao'] = formatLocalDate(new Date());
 
     const result = await createProperty(contactId, normalizedFields);
     const recordId = extractRecordId(result);
@@ -84,7 +76,6 @@ export async function PUT(req: NextRequest) {
     if (Object.keys(normalizedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 });
     }
-    normalizedFields['data_da_ultima_atualizacao'] = formatLocalDate(new Date());
 
     try {
       const result = await updateProperty(recordId, normalizedFields);

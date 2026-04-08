@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
 import { hasActivePropertyStatus, PROPERTY_STATUS_KEY } from '@/lib/property-status';
@@ -14,12 +14,11 @@ type Property = {
   isOpen: boolean;
   isSaving: boolean;
   isDirty: boolean;
+  hasConfirmedDetails: boolean;
   data: PropertyData;
 };
 
 type Toast = { id: number; type: 'success' | 'error'; message: string };
-
-const EXIT_CONFIRMATION_MESSAGE = 'As informações das propriedades estão corretas?';
 
 // ─── Helpers ─────────────────────────────────────────────
 function formatLocalDate(date: Date) {
@@ -61,6 +60,10 @@ function mapPropertyToGhlFields(data: PropertyData): Record<string, string | str
   }
 
   return result;
+}
+
+function getFinalConfirmationLabel(count: number): string {
+  return `Confirmar detalhes d${count === 1 ? 'o' : 'os'} ${count} imóve${count === 1 ? 'l' : 'is'}`;
 }
 
 // ─── Field component ─────────────────────────────────────
@@ -196,7 +199,7 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
   index: number;
   onUpdate: (data: PropertyData) => void;
   onDelete: () => void;
-  onSave: (nextData?: PropertyData) => void;
+  onSave: (options?: { nextData?: PropertyData; markConfirmed?: boolean }) => void;
 }) {
   const toggle = () => onUpdate({ ...property.data, __open: property.isOpen ? '' : '1' });
 
@@ -204,7 +207,7 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
     const nextData = { ...property.data, [key]: val };
     onUpdate(nextData);
     if (key === PROPERTY_STATUS_KEY) {
-      onSave(nextData);
+      onSave({ nextData, markConfirmed: false });
     }
   };
 
@@ -219,17 +222,17 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
           </div>
         </div>
         <div className="property-card-actions" onClick={e => e.stopPropagation()}>
-          {property.isDirty && (
-            <button
-              className="btn-icon"
-              title="Salvar este imóvel"
-              onClick={() => onSave()}
-              disabled={property.isSaving}
-              style={{ color: '#1A6B3C', borderColor: '#A8D5B5' }}
-            >
-              {property.isSaving ? '⏳' : '💾'}
-            </button>
-          )}
+          <button
+            className="btn-icon"
+            title={property.hasConfirmedDetails ? 'Detalhes confirmados' : 'Salvar e confirmar este imóvel'}
+            onClick={() => onSave({ markConfirmed: true })}
+            disabled={property.isSaving}
+            style={property.hasConfirmedDetails
+              ? { color: '#1A6B3C', borderColor: '#A8D5B5', background: '#F4FBF6' }
+              : { color: '#1A6B3C', borderColor: '#A8D5B5' }}
+          >
+            {property.isSaving ? '⏳' : property.hasConfirmedDetails ? '✓' : '💾'}
+          </button>
           <button className="btn-icon delete" title="Remover" onClick={onDelete}>🗑</button>
           <span className={`chevron${property.isOpen ? ' open' : ''}`}>▼</span>
         </div>
@@ -272,9 +275,6 @@ export default function ImoveisPage() {
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isConfirmingProperties, setIsConfirmingProperties] = useState(false);
-  const propertiesRef = useRef<Property[]>([]);
-  const pendingExitConfirmationRef = useRef(false);
-  const exitSyncStartedRef = useRef(false);
 
   // ── Load contact + existing properties ──
   useEffect(() => {
@@ -297,6 +297,7 @@ export default function ImoveisPage() {
             isOpen: false,
             isSaving: false,
             isDirty: false,
+            hasConfirmedDetails: false,
             data: (rec.properties || rec) as PropertyData,
           }));
 
@@ -312,91 +313,13 @@ export default function ImoveisPage() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000);
   }, []);
 
-  useEffect(() => {
-    propertiesRef.current = properties;
-  }, [properties]);
-
-  const buildExitConfirmationPayload = useCallback(() => {
-    return propertiesRef.current
-      .filter((property): property is Property & { id: string } => Boolean(property.id))
-      .map(property => ({
-        recordId: property.id,
-        fields: mapPropertyToGhlFields(property.data),
-      }));
-  }, []);
-
-  const syncExitConfirmation = useCallback(() => {
-    if (exitSyncStartedRef.current) return;
-
-    const payloadProperties = buildExitConfirmationPayload();
-
-    if (payloadProperties.length === 0) return;
-
-    exitSyncStartedRef.current = true;
-
-    const payload = JSON.stringify({ properties: payloadProperties });
-
-    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const queued = navigator.sendBeacon(
-        '/api/properties/confirm-exit',
-        new Blob([payload], { type: 'application/json' })
-      );
-      if (queued) return;
-    }
-
-    void fetch('/api/properties/confirm-exit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload,
-      keepalive: true,
-    });
-  }, [buildExitConfirmationPayload]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (propertiesRef.current.filter(property => property.id).length === 0) return;
-
-      pendingExitConfirmationRef.current = true;
-      event.preventDefault();
-      event.returnValue = EXIT_CONFIRMATION_MESSAGE;
-      return EXIT_CONFIRMATION_MESSAGE;
-    };
-
-    const handlePageHide = () => {
-      if (!pendingExitConfirmationRef.current) return;
-      syncExitConfirmation();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (pendingExitConfirmationRef.current) {
-          syncExitConfirmation();
-        }
-        return;
-      }
-
-      pendingExitConfirmationRef.current = false;
-      exitSyncStartedRef.current = false;
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handlePageHide);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handlePageHide);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [syncExitConfirmation]);
-
   const updateProperty = (index: number, data: PropertyData) => {
     setProperties(ps => ps.map((p, i) => {
       if (i !== index) return p;
       const isOpen = data.__open !== undefined ? data.__open === '1' : p.isOpen;
       const { __open, ...cleanData } = data;
       void __open;
-      return { ...p, data: cleanData, isOpen, isDirty: true };
+      return { ...p, data: cleanData, isOpen, isDirty: true, hasConfirmedDetails: false };
     }));
   };
 
@@ -420,7 +343,10 @@ export default function ImoveisPage() {
       .catch(() => addToast('error', 'Erro ao remover imóvel'));
   };
 
-  const saveProperty = async (index: number, overrideData?: PropertyData) => {
+  const saveProperty = async (
+    index: number,
+    options?: { nextData?: PropertyData; markConfirmed?: boolean }
+  ) => {
     const prop = properties[index];
     if (!contactId) return;
     if (!prop) return;
@@ -428,11 +354,10 @@ export default function ImoveisPage() {
     setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: true } : p));
 
     try {
-      const dateStr = formatLocalDate(new Date());
-      const sourceData = overrideData ?? prop.data;
-      const dataWithDate: PropertyData = { ...sourceData, data_da_ultima_atualizacao: dateStr };
+      const sourceData = options?.nextData ?? prop.data;
+      const markConfirmed = options?.markConfirmed === true;
       const method = prop.isNew || !prop.id ? 'POST' : 'PUT';
-      const ghlFields = mapPropertyToGhlFields(dataWithDate);
+      const ghlFields = mapPropertyToGhlFields(sourceData);
       const body = method === 'POST'
         ? { contactId, fields: ghlFields }
         : { recordId: prop.id, contactId, fields: ghlFields };
@@ -455,17 +380,25 @@ export default function ImoveisPage() {
         data.result?.data?.id ||
         prop.id;
       console.log('[saveProperty] stored newId:', newId, 'from data.id:', data.id, 'result keys:', Object.keys(data.result || {}));
-      if (!hasActivePropertyStatus(dataWithDate as Record<string, unknown>)) {
+      if (!hasActivePropertyStatus(sourceData as Record<string, unknown>)) {
         setProperties(ps => ps.filter((_, i) => i !== index));
         addToast('success', '✓ Imóvel atualizado');
         return;
       }
 
       setProperties(ps => ps.map((p, i) => i === index
-        ? { ...p, id: newId, isNew: false, isSaving: false, isDirty: false, data: dataWithDate }
+        ? {
+            ...p,
+            id: newId,
+            isNew: false,
+            isSaving: false,
+            isDirty: false,
+            hasConfirmedDetails: markConfirmed ? true : p.hasConfirmedDetails,
+            data: sourceData,
+          }
         : p
       ));
-      addToast('success', '✓ Imóvel salvo com sucesso');
+      addToast('success', markConfirmed ? 'Detalhes do imóvel confirmados' : '✓ Imóvel salvo com sucesso');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro';
       setProperties(ps => ps.map((p, i) => i === index ? { ...p, isSaving: false } : p));
@@ -473,24 +406,24 @@ export default function ImoveisPage() {
     }
   };
 
-  const saveAll = async () => {
-    const dirtyIndexes = properties.map((p, i) => p.isDirty ? i : -1).filter(i => i >= 0);
-    for (const idx of dirtyIndexes) {
-      await saveProperty(idx);
-    }
-    if (dirtyIndexes.length === 0) addToast('success', 'Todos os imóveis já estão salvos');
-  };
-
   const confirmProperties = async () => {
-    const payloadProperties = buildExitConfirmationPayload();
+    const unconfirmedCount = properties.filter(property => !property.hasConfirmedDetails).length;
+    if (unconfirmedCount > 0) {
+      addToast('error', 'Clique primeiro no ícone de salvar de cada imóvel para confirmar os detalhes antes de concluir.');
+      return;
+    }
+
+    const payloadProperties = properties
+      .filter((property): property is Property & { id: string } => Boolean(property.id))
+      .map(property => ({
+        recordId: property.id,
+        fields: mapPropertyToGhlFields(property.data),
+      }));
 
     if (payloadProperties.length === 0) {
       addToast('error', 'Nenhum imóvel salvo foi encontrado para confirmar');
       return;
     }
-
-    const confirmed = window.confirm(EXIT_CONFIRMATION_MESSAGE);
-    if (!confirmed) return;
 
     setIsConfirmingProperties(true);
 
@@ -556,10 +489,9 @@ export default function ImoveisPage() {
     </div>
   );
 
-  const dirtyCount = properties.filter(p => p.isDirty).length;
   const isSavingAny = properties.some(p => p.isSaving);
-  const isBusy = isSavingAny || isConfirmingProperties;
-  const saveButtonClass = isSavingAny ? 'btn-save loading' : dirtyCount > 0 ? 'btn-save dirty' : 'btn-save idle';
+  const confirmButtonLabel = getFinalConfirmationLabel(properties.length);
+  const saveButtonClass = isConfirmingProperties ? 'btn-save loading' : 'btn-save dirty';
 
   return (
     <>
@@ -595,7 +527,7 @@ export default function ImoveisPage() {
                 index={i}
                 onUpdate={data => updateProperty(i, data)}
                 onDelete={() => deleteProperty(i)}
-                onSave={data => saveProperty(i, data)}
+                onSave={options => saveProperty(i, options)}
               />
             ))
           )}
@@ -603,22 +535,13 @@ export default function ImoveisPage() {
           {properties.length > 0 && (
             <div className="save-bar">
               <button
-                className={`btn-confirm${isConfirmingProperties ? ' loading' : ''}`}
-                onClick={confirmProperties}
-                disabled={isBusy}
-              >
-                {isConfirmingProperties ? <><span className="spinner" /> Confirmando...</> : 'Confirmar informações'}
-              </button>
-              <button
                 className={saveButtonClass}
-                onClick={saveAll}
-                disabled={isBusy || dirtyCount === 0}
+                onClick={confirmProperties}
+                disabled={isSavingAny || isConfirmingProperties}
               >
-                {isSavingAny
-                  ? <><span className="spinner" /> Salvando...</>
-                  : dirtyCount > 0
-                    ? `💾 Salvar ${dirtyCount} imóve${dirtyCount === 1 ? 'l' : 'is'}`
-                    : '✓ Tudo salvo'
+                {isConfirmingProperties
+                  ? <><span className="spinner" /> Confirmando...</>
+                  : confirmButtonLabel
                 }
               </button>
             </div>
