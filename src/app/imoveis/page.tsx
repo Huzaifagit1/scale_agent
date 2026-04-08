@@ -271,6 +271,7 @@ export default function ImoveisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isConfirmingProperties, setIsConfirmingProperties] = useState(false);
   const propertiesRef = useRef<Property[]>([]);
   const pendingExitConfirmationRef = useRef(false);
   const exitSyncStartedRef = useRef(false);
@@ -315,15 +316,19 @@ export default function ImoveisPage() {
     propertiesRef.current = properties;
   }, [properties]);
 
-  const syncExitConfirmation = useCallback(() => {
-    if (exitSyncStartedRef.current) return;
-
-    const payloadProperties = propertiesRef.current
+  const buildExitConfirmationPayload = useCallback(() => {
+    return propertiesRef.current
       .filter((property): property is Property & { id: string } => Boolean(property.id))
       .map(property => ({
         recordId: property.id,
         fields: mapPropertyToGhlFields(property.data),
       }));
+  }, []);
+
+  const syncExitConfirmation = useCallback(() => {
+    if (exitSyncStartedRef.current) return;
+
+    const payloadProperties = buildExitConfirmationPayload();
 
     if (payloadProperties.length === 0) return;
 
@@ -345,7 +350,7 @@ export default function ImoveisPage() {
       body: payload,
       keepalive: true,
     });
-  }, []);
+  }, [buildExitConfirmationPayload]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -476,6 +481,57 @@ export default function ImoveisPage() {
     if (dirtyIndexes.length === 0) addToast('success', 'Todos os imóveis já estão salvos');
   };
 
+  const confirmProperties = async () => {
+    const payloadProperties = buildExitConfirmationPayload();
+
+    if (payloadProperties.length === 0) {
+      addToast('error', 'Nenhum imóvel salvo foi encontrado para confirmar');
+      return;
+    }
+
+    const confirmed = window.confirm(EXIT_CONFIRMATION_MESSAGE);
+    if (!confirmed) return;
+
+    setIsConfirmingProperties(true);
+
+    try {
+      const res = await fetch('/api/properties/confirm-exit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: payloadProperties }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao confirmar');
+
+      const dateStr = formatLocalDate(new Date());
+      const updatedIds = Array.isArray(data.updatedIds) ? new Set<string>(data.updatedIds) : new Set<string>();
+
+      setProperties(ps => ps.map(property => {
+        if (!property.id || !updatedIds.has(property.id)) return property;
+        return {
+          ...property,
+          isDirty: false,
+          isSaving: false,
+          data: {
+            ...property.data,
+            data_da_ultima_atualizacao: dateStr,
+          },
+        };
+      }));
+
+      if (Array.isArray(data.failures) && data.failures.length > 0) {
+        addToast('error', 'Alguns imóveis não puderam ser confirmados');
+      } else {
+        addToast('success', 'Informações confirmadas e data atualizada');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erro';
+      addToast('error', `Erro ao confirmar: ${msg}`);
+    } finally {
+      setIsConfirmingProperties(false);
+    }
+  };
+
   // ── Render states ──
   if (loading) return (
     <div className="state-screen">
@@ -502,6 +558,7 @@ export default function ImoveisPage() {
 
   const dirtyCount = properties.filter(p => p.isDirty).length;
   const isSavingAny = properties.some(p => p.isSaving);
+  const isBusy = isSavingAny || isConfirmingProperties;
   const saveButtonClass = isSavingAny ? 'btn-save loading' : dirtyCount > 0 ? 'btn-save dirty' : 'btn-save idle';
 
   return (
@@ -546,9 +603,16 @@ export default function ImoveisPage() {
           {properties.length > 0 && (
             <div className="save-bar">
               <button
+                className={`btn-confirm${isConfirmingProperties ? ' loading' : ''}`}
+                onClick={confirmProperties}
+                disabled={isBusy}
+              >
+                {isConfirmingProperties ? <><span className="spinner" /> Confirmando...</> : 'Confirmar informações'}
+              </button>
+              <button
                 className={saveButtonClass}
                 onClick={saveAll}
-                disabled={isSavingAny || dirtyCount === 0}
+                disabled={isBusy || dirtyCount === 0}
               >
                 {isSavingAny
                   ? <><span className="spinner" /> Salvando...</>

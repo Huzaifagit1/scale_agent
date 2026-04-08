@@ -275,6 +275,8 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
   position: sticky;
   bottom: 0;
   display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   justify-content: center;
   background: linear-gradient(to top, rgba(248, 245, 239, 0.96), rgba(248, 245, 239, 0.82));
   border-top: 1px solid rgba(210, 198, 179, 0.7);
@@ -283,6 +285,7 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
   z-index: 10;
   backdrop-filter: blur(10px);
 }
+.btn-confirm,
 .btn-save {
   display: flex;
   align-items: center;
@@ -299,6 +302,27 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
   cursor: pointer;
   transition: all 0.2s;
   letter-spacing: 0.02em;
+}
+.btn-confirm {
+  min-width: 240px;
+  background: #fff;
+  color: var(--green);
+  border-color: #b8d3c2;
+  box-shadow: 0 10px 24px rgba(26, 107, 60, 0.08);
+}
+.btn-confirm:hover {
+  background: #f4fbf6;
+  border-color: #94bf9f;
+  transform: translateY(-1px);
+}
+.btn-confirm.loading {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+  cursor: wait;
+}
+.btn-confirm:disabled {
+  transform: none;
 }
 .btn-save.dirty {
   width: 100%;
@@ -392,4 +416,5 @@ h1, h2, h3 { font-family: 'Playfair Display', serif; }
 @media (max-width: 600px) {
   .form-grid { grid-template-columns: 1fr; }
   .radio-group, .checkbox-group { gap: 6px; }
+  .btn-confirm, .btn-save { width: 100%; }
 }
