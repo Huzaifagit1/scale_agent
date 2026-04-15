@@ -29,6 +29,9 @@ function formatLocalDate(date: Date) {
 }
 
 function getPropertyLabel(p: Property, index: number): string {
+  const reference = String(p.data['referencia_do_imovel'] || '').trim();
+  if (reference) return reference;
+
   const addr = [
     p.data['cidade_endereco'],
     p.data['bairro_commercial'],
