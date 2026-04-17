@@ -21,19 +21,12 @@ export const FORM_SECTIONS: Section[] = [
     id: 'negocio',
     title: 'Pretensão do Negócio',
     fields: [
+      { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Suspenso'] },
       { key: 'escolha_a_pretensao_do_negocio', ghlId: '3yU7SZgRWPPY64qIAejI', label: 'Pretensão do negócio', type: 'CHECKBOX', options: ['Venda', 'Aluguel'] },
       { key: 'tipo_de_imovel', ghlId: 'ih9s4iEpVxFYaz1hdxfC', label: 'Tipo do imóvel', type: 'RADIO', options: ['Apartamento', 'Area', 'Armazem', 'Barracao', 'Casa', 'Casa comercial', 'Chacara', 'Conjunto', 'Fazenda', 'Galpao', 'Haras', 'Ponto', 'Prédio comercial', 'Sala', 'Sala comercial', 'Salao', 'Sitio', 'Terreno'] },
       { key: 'categoria_do_imovel', ghlId: 'hkUd2nSwCOKCQGl0HBM7', label: 'Categoria', type: 'RADIO', options: ['Cobertura', 'Duplex', 'Flat', 'Kitnet', 'Sobrado', 'Terreo(a)', 'Normal', 'Padrão'] },
       { key: 'finalidade', ghlId: 'KHnkDUqmqTBGMZG7OWlD', label: 'Finalidade', type: 'RADIO', options: ['Comercial', 'Industrial', 'Residencial', 'Rural', 'Temporada'] },
-      { key: 'situacao_da_disponibilidade_atualizacao', ghlId: 'ix8cozN35Zl1H3JvPa1C', label: 'Situação', type: 'RADIO', options: ['Ativo', 'Inativo', 'Vendido', 'Locado', 'Permutado', 'Suspenso'] },
       { key: 'referencia_do_imovel', ghlId: 'W5rMkS4725rkUH6YPfUW', label: 'Referência', type: 'TEXT', readOnly: true },
-    ]
-  },
-  {
-    id: 'atualizacao',
-    title: 'Situação da atualização',
-    fields: [
-      { key: 'data_da_ultima_atualizacao', ghlId: 'K3bp7wQ0U1t1DtkQxeYt', label: 'Data da última atualização', type: 'DATE', readOnly: true },
     ]
   },
   {
