@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
-import { hasActivePropertyStatus, PROPERTY_STATUS_KEY } from '@/lib/property-status';
+import { PROPERTY_STATUS_KEY } from '@/lib/property-status';
 
 // ─── Types ───────────────────────────────────────────────
 type PropertyData = Record<string, string | string[]>;
@@ -291,9 +291,6 @@ export default function ImoveisPage() {
         
         // First try to load from custom object records (properties)
         let loaded: Property[] = (data.properties || [])
-          .filter((rec: Record<string, unknown>) =>
-            hasActivePropertyStatus((rec.properties || rec) as Record<string, unknown>)
-          )
           .map((rec: Record<string, unknown>) => ({
             id: rec.id as string,
             isNew: false,
@@ -383,11 +380,6 @@ export default function ImoveisPage() {
         data.result?.data?.id ||
         prop.id;
       console.log('[saveProperty] stored newId:', newId, 'from data.id:', data.id, 'result keys:', Object.keys(data.result || {}));
-      if (!hasActivePropertyStatus(sourceData as Record<string, unknown>)) {
-        setProperties(ps => ps.filter((_, i) => i !== index));
-        addToast('success', '✓ Imóvel atualizado');
-        return;
-      }
 
       setProperties(ps => ps.map((p, i) => i === index
         ? {
@@ -434,7 +426,7 @@ export default function ImoveisPage() {
       const res = await fetch('/api/properties/confirm-exit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: payloadProperties }),
+        body: JSON.stringify({ properties: payloadProperties, contactId }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erro ao confirmar');
@@ -458,7 +450,10 @@ export default function ImoveisPage() {
       if (Array.isArray(data.failures) && data.failures.length > 0) {
         addToast('error', 'Alguns imóveis não puderam ser confirmados');
       } else {
-        addToast('success', 'Informações confirmadas e data atualizada');
+        addToast('success', 'Informações confirmadas! Redirecionando para o WhatsApp...');
+        setTimeout(() => {
+          window.location.href = 'https://wa.me/5554933007087';
+        }, 1500);
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro';
@@ -498,6 +493,23 @@ export default function ImoveisPage() {
 
   return (
     <>
+      {/* WhatsApp redirect notice */}
+      <div style={{
+        backgroundColor: '#DC2626',
+        color: '#ffffff',
+        padding: '16px 20px',
+        borderRadius: '8px',
+        margin: '16px',
+        boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+      }}>
+        <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '6px' }}>
+          ⚠️ Aviso Importante
+        </div>
+        <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
+          Após salvar seus registros, você será redirecionado automaticamente para o WhatsApp para confirmar sua atualização. Por favor, conclua a confirmação para finalizar o processo.
+        </div>
+      </div>
+
       {/* Header */}
       <header className="page-header">
         <div className="container">

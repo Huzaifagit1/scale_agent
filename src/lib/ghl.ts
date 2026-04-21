@@ -1,7 +1,7 @@
 import { FORM_SECTIONS } from './fields';
 import { readFile } from 'fs/promises';
 import path from 'path';
-import { hasActivePropertyStatus, normalizePropertyStatus, PROPERTY_STATUS_KEY } from './property-status';
+import { normalizePropertyStatus, PROPERTY_STATUS_KEY } from './property-status';
 
 const GHL_BASE = 'https://services.leadconnectorhq.com';
 const API_KEY = process.env.GHL_API_TOKEN!;
@@ -324,9 +324,6 @@ export async function getPropertiesForContact(contactId: string) {
             fieldMap.suffixToUi,
             fieldMap.optionKeyToLabelBySuffix
           );
-          if (!hasActivePropertyStatus(record.properties)) {
-            return null;
-          }
         }
         return record;
       } catch {
@@ -345,7 +342,7 @@ function mapCustomObjectToUi(
 ) {
   const out: Record<string, unknown> = {};
   for (const [suffix, rawValue] of Object.entries(properties)) {
-    const uiKey = suffixToUi[suffix] ?? suffix;
+    const uiKey = SUFFIX_TO_UI_HARDCODED[suffix] ?? suffixToUi[suffix] ?? suffix;
     if (!UI_KEYS.has(uiKey)) continue;
 
     if (isObject(rawValue) && typeof rawValue.value === 'number') {
@@ -433,54 +430,62 @@ function mapCustomObjectToUi(
   return out;
 }
 
+// UI key → GHL custom object field suffix for location oT5ygTOd3WJdNY45bN5q
+const HARDCODED: Record<string, string> = {
+  referencia_do_imovel:                  'nome_do_imvel',
+  situacao_da_disponibilidade_atualizacao: 'disponibilidade_do_imvel',
+  permuta:                               'o_proprietrio_aceita_permuta_do_imvel',
+  tipo_de_imovel:                        'tipo_do_imvel',
+  finalidade:                            'finalidade_do_imvel',
+  endereco_do_imovel:                    'endereo_do_imvel',
+  numero_do_endereco_do_imovel:          'nmero_do_endereo_do_imvel',
+  bairro_commercial:                     'bairro_do_imvel',
+  bairro_oficial_endereco:               'bairro_do_imvel',
+  cep:                                   'cep_do_imvel',
+  cidade_endereco:                       'cidade_do_imvel',
+  uf_endereco:                           'estado_do_imvel',
+  numero_de_dormitorios:                 'nmero_de_dormitrios',
+  numero_de_suites:                      'nmero_de_sutes',
+  numero_de_banheiros:                   'nmero_de_banheiros',
+  numero_de_salas:                       'nmero_de_salas',
+  numero_de_vagas_garagens_cobertas:     'nmero_de_vagas',
+  area_privativa:                        'rea_em_m',
+  data_da_ultima_atualizacao:            'ltima_atualizao_da_disponibilidade_do_imvel',
+  valor_de_venda:                        'valor_de_venda',
+  valor_de_locacao:                      'valor_de_locao',
+  valor_do_condominio:                   'valor_de_condominio',
+  valor_do_iptu:                         'valor_de_iptu',
+  descricao_do_imovel:                   'descrio_completa_do_imvel',
+};
+
+// GHL custom object field suffix → UI key (inverse of HARDCODED, for reading records)
+const SUFFIX_TO_UI_HARDCODED: Record<string, string> = {
+  nome_do_imvel:                                  'referencia_do_imovel',
+  disponibilidade_do_imvel:                       'situacao_da_disponibilidade_atualizacao',
+  tipo_do_imvel:                                  'tipo_de_imovel',
+  finalidade_do_imvel:                            'finalidade',
+  endereo_do_imvel:                               'endereco_do_imovel',
+  nmero_do_endereo_do_imvel:                     'numero_do_endereco_do_imovel',
+  bairro_do_imvel:                                'bairro_commercial',
+  cep_do_imvel:                                   'cep',
+  cidade_do_imvel:                                'cidade_endereco',
+  estado_do_imvel:                                'uf_endereco',
+  nmero_de_dormitrios:                           'numero_de_dormitorios',
+  nmero_de_sutes:                                 'numero_de_suites',
+  nmero_de_banheiros:                             'numero_de_banheiros',
+  nmero_de_salas:                                 'numero_de_salas',
+  nmero_de_vagas:                                 'numero_de_vagas_garagens_cobertas',
+  rea_em_m:                                      'area_privativa',
+  ltima_atualizao_da_disponibilidade_do_imvel:  'data_da_ultima_atualizacao',
+  valor_de_locao:                                 'valor_de_locacao',
+  valor_de_condominio:                            'valor_do_condominio',
+  valor_de_iptu:                                  'valor_do_iptu',
+  o_proprietrio_aceita_permuta_do_imvel:          'permuta',
+  descrio_completa_do_imvel:                     'descricao_do_imovel',
+};
+
 async function toPropertiesObject(fields: Record<string, unknown>) {
   const fieldMap = await getFieldMap();
-  // HARDCODED mapping verified from ACTUAL RECORD properties in GHL (not schema guesses).
-  // Source: diagnostics sampleRecord.properties keys + customObjectFields_byKey fieldKeys.
-  // This takes HIGHEST priority — checked before auto-mapper.
-  const HARDCODED: Record<string, string> = {
-    // UI key → real GHL custom object field suffix
-    referencia_do_imovel:                  'referncia',          // GHL has typo: referncia
-    situacao_da_disponibilidade_atualizacao: 'situacao_da_disponibilidade_atualizacao',
-    permuta:                               'permuta_pl',         // single options field
-    temporada:                             'temporada_pl',       // single options field
-    escolha_a_pretensao_do_negocio:        'escolha_a_pretensao_do_negocio',
-    tipo_de_imovel:                        'tipo_de_imovel',
-    categoria_do_imovel:                   'categoria_do_imovel',
-    endereco_do_imovel:                    'endereco_do_imovel',
-    numero_do_endereco_do_imovel:          'numero_do_endereco_do_imovel',
-    complemento_de_endereco:               'complemento_de_endereco',
-    bairro_oficial_endereco:               'bairro_oficial_endereco',
-    regiao_endereco:                       'regiao_endereco',
-    quadra_endereco:                       'quadra_endereco',
-    lote_endereco:                         'lote_endereco',
-    ponto_de_referencia_endereco:          'ponto_de_referencia_endereco',
-    cep:                    'cep',
-    cidade_endereco:        'cidade_endereco',
-    uf_endereco:            'uf_endereco',
-    pais_endereco:          'pais_endereco',
-    bairro_commercial:      'bairro_commercial',
-    numero_de_dormitorios:  'numero_de_dormitorios',
-    numero_de_suites:       'numero_de_suites',
-    numero_de_banheiros:    'numero_de_banheiros',
-    numero_de_salas:        'numero_de_salas',
-    numero_de_vagas_garagens_cobertas:         'numero_de_vagas_garagens_cobertas',
-    numero_de_vagas_de_garagens_descobertas:   'numero_de_vagas_de_garagens_descobertas',
-    numero_de_elevadores:   'numero_de_elevadores',
-    numero_de_andares:      'numero_de_andares',
-    area_privativa:         'area_privativa',
-    area_total:             'area_total',
-    area_construida:        'area_construida',
-    area_dimensao_terreno:  'area_dimensao_terreno',
-    area_util:              'area_util',
-    data_da_ultima_atualizacao: 'data_da_ultima_atualizacao',
-    valor_de_venda:         'valor_de_venda',
-    valor_de_locacao:       'valor_de_locacao',
-    valor_do_condominio:    'valor_do_condominio',
-    valor_do_iptu:          'valor_do_iptu',
-    finalidade:             'finalidade',
-    descricao_do_imovel:    'descricao_do_imovel',
-  };
   const fallbackAliases: Record<string, string> = {};
 
   const out: Record<string, unknown> = {};
@@ -488,13 +493,15 @@ async function toPropertiesObject(fields: Record<string, unknown>) {
     if (rawValue === '' || rawValue === null || rawValue === undefined) continue;
 
     const normalizedUi = normalizeLabel(uiKey);
-    // HARDCODED takes priority over the cached auto-mapper (which may have stale/wrong mappings)
     const schemaSuffix =
       HARDCODED[uiKey] ??
       fallbackAliases[uiKey] ??
       fieldMap.uiToSuffix[uiKey] ??
       fieldMap.customNameToSuffix[normalizedUi] ??
       uiKey;
+
+    // Skip fields that don't exist in this location's custom object schema
+    if (!(schemaSuffix in fieldMap.customTypeBySuffix)) continue;
 
     const type = FIELD_TYPE_BY_KEY[uiKey] ?? fieldMap.customTypeBySuffix[schemaSuffix] ?? 'TEXT';
     const optionMap =
@@ -821,6 +828,17 @@ export async function updateProperty(recordId: string, fields: Record<string, un
   }
 
   return parsed;
+}
+
+export async function addTagToContact(contactId: string, tag: string) {
+  const res = await fetch(`${GHL_BASE}/contacts/${contactId}/tags`, {
+    method: 'POST',
+    headers: headers(),
+    body: JSON.stringify({ tags: [tag] }),
+  });
+  const text = await res.text();
+  log('addTag', res.status, text);
+  // intentionally non-throwing — tag failure must not block the main response
 }
 
 export async function deleteProperty(recordId: string) {

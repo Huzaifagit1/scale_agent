@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateProperty } from '@/lib/ghl';
+import { updateProperty, addTagToContact } from '@/lib/ghl';
 import { FORM_SECTIONS } from '@/lib/fields';
 
 function formatLocalDate(date: Date) {
@@ -45,7 +45,7 @@ async function parseBody(req: NextRequest) {
   if (!text) return null;
 
   try {
-    return JSON.parse(text) as { properties?: unknown };
+    return JSON.parse(text) as { properties?: unknown; contactId?: string };
   } catch {
     return null;
   }
@@ -54,6 +54,7 @@ async function parseBody(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await parseBody(req);
   const properties = Array.isArray(body?.properties) ? body.properties : [];
+  const contactId = typeof body?.contactId === 'string' ? body.contactId : undefined;
 
   if (properties.length === 0) {
     return NextResponse.json({ error: 'No properties provided' }, { status: 400 });
@@ -81,6 +82,13 @@ export async function POST(req: NextRequest) {
   const failures = results
     .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
     .map(result => result.reason instanceof Error ? result.reason.message : 'Unknown error');
+
+  // Tag the contact after any successful saves — fire-and-forget, non-blocking
+  if (contactId && updatedIds.length > 0) {
+    addTagToContact(contactId, 'whatsapp_link_updated').catch((err) =>
+      console.error('[confirm-exit] addTag failed:', err)
+    );
+  }
 
   return NextResponse.json({
     success: failures.length === 0,
