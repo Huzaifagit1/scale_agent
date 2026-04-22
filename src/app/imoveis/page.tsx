@@ -452,7 +452,7 @@ export default function ImoveisPage() {
       } else {
         addToast('success', 'Informações confirmadas! Redirecionando para o WhatsApp...');
         setTimeout(() => {
-          window.location.href = 'https://wa.me/5554933007087';
+          window.location.href = 'https://wa.me/5511966583506';
         }, 1500);
       }
     } catch (e: unknown) {
