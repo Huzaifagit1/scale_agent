@@ -452,8 +452,7 @@ export default function ImoveisPage() {
       } else {
         addToast('success', 'Informações confirmadas! Redirecionando para o WhatsApp...');
         setTimeout(() => {
-          window.location.href = 'https://wa.me/5511966583506';
-        }, 1500);
+window.location.href = 'https://wa.me/5511966583506?text=' + encodeURIComponent('Olá! Acabei de atualizar os dados dos meus imóveis no cadastro. Obrigado');        }, 1500);
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro';
