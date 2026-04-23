@@ -505,7 +505,7 @@ window.location.href = 'https://wa.me/5511966583506?text=' + encodeURIComponent(
           ⚠️ Aviso Importante
         </div>
         <div style={{ fontSize: '0.9rem', lineHeight: '1.5' }}>
-          Após salvar seus registros, você será redirecionado automaticamente para o WhatsApp para confirmar sua atualização. Por favor, conclua a confirmação para finalizar o processo.
+          Após salvar seus registros, você será redirecionado automaticamente para o WhatsApp para confirmar sua atualização. Por favor, conclua a confirmação para finalizar o processo enviando uma mensagem no chat.
         </div>
       </div>
 
