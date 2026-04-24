@@ -197,11 +197,10 @@ function FieldInput({ field, value, onChange }: {
 }
 
 // ─── Single property form ─────────────────────────────────
-function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
+function PropertyForm({ property, index, onUpdate, onSave }: {
   property: Property;
   index: number;
   onUpdate: (data: PropertyData) => void;
-  onDelete: () => void;
   onSave: (options?: { nextData?: PropertyData; markConfirmed?: boolean }) => void;
 }) {
   const toggle = () => onUpdate({ ...property.data, __open: property.isOpen ? '' : '1' });
@@ -236,7 +235,6 @@ function PropertyForm({ property, index, onUpdate, onDelete, onSave }: {
           >
             {property.isSaving ? '⏳' : property.hasConfirmedDetails ? '✓' : '💾'}
           </button>
-          <button className="btn-icon delete" title="Remover" onClick={onDelete}>🗑</button>
           <span className={`chevron${property.isOpen ? ' open' : ''}`}>▼</span>
         </div>
       </div>
@@ -321,26 +319,6 @@ export default function ImoveisPage() {
       void __open;
       return { ...p, data: cleanData, isOpen, isDirty: true, hasConfirmedDetails: false };
     }));
-  };
-
-  const deleteProperty = (index: number) => {
-    const prop = properties[index];
-    // Remove from UI immediately
-    setProperties(ps => ps.filter((_, i) => i !== index));
-
-    // If it's a new unsaved property, nothing to delete from GHL
-    if (!prop.id || prop.isNew) {
-      return;
-    }
-
-    // Delete from GHL
-    fetch(`/api/properties?recordId=${prop.id}`, { method: 'DELETE' })
-      .then(r => r.json())
-      .then(data => {
-        if (data?.error) throw new Error(data.error);
-        addToast('success', 'Imóvel removido');
-      })
-      .catch(() => addToast('error', 'Erro ao remover imóvel'));
   };
 
   const saveProperty = async (
@@ -540,7 +518,6 @@ window.location.href = 'https://wa.me/5511966583506?text=' + encodeURIComponent(
                 property={prop}
                 index={i}
                 onUpdate={data => updateProperty(i, data)}
-                onDelete={() => deleteProperty(i)}
                 onSave={options => saveProperty(i, options)}
               />
             ))
