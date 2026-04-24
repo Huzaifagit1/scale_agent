@@ -4,7 +4,7 @@ const GHL_BASE = 'https://services.leadconnectorhq.com';
 const API_KEY = process.env.GHL_API_TOKEN;
 const LOCATION_ID = process.env.GHL_LOCATION_ID;
 const OBJECT_ID = process.env.GHL_OBJECT_ID;
-const OBJECT_KEY = process.env.GHL_OBJECT_KEY;
+const OBJECT_KEY = process.env.GHL_OBJECT_KEY;   
 
 const headers = () => ({
   Authorization: `Bearer ${API_KEY}`,
