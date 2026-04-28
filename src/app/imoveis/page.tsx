@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FORM_SECTIONS, FieldDef } from '@/lib/fields';
 import { PROPERTY_STATUS_KEY } from '@/lib/property-status';
@@ -265,6 +265,35 @@ function PropertyForm({ property, index, onUpdate, onSave }: {
   );
 }
 
+// ─── Unsaved changes modal ────────────────────────────────
+function UnsavedChangesModal({ onSave, onLeave, onClose, isSaving }: {
+  onSave: () => Promise<void>;
+  onLeave: () => void;
+  onClose: () => void;
+  isSaving: boolean;
+}) {
+  return (
+    <div className="modal-overlay">
+      <div className="modal-dialog">
+        <div className="modal-icon">⚠️</div>
+        <h3 className="modal-title">Alterações não salvas</h3>
+        <p className="modal-message">
+          Você tem alterações não salvas. Se sair agora, suas informações serão perdidas.
+        </p>
+        <div className="modal-actions">
+          <button className="modal-btn-save" onClick={onSave} disabled={isSaving}>
+            {isSaving
+              ? <><span className="spinner dark" /> Salvando...</>
+              : '💾 Salvar alterações'}
+          </button>
+          <button className="modal-btn-leave" onClick={onLeave}>Sair sem salvar</button>
+          <button className="modal-btn-cancel" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────
 export default function ImoveisPage() {
   const searchParams = useSearchParams();
@@ -276,6 +305,12 @@ export default function ImoveisPage() {
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isConfirmingProperties, setIsConfirmingProperties] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [isSavingAll, setIsSavingAll] = useState(false);
+
+  const hasUnsavedChanges = properties.some(p => p.isDirty);
+  const historyDepthRef = useRef(0);
+  const leaveActionRef = useRef<() => void>(() => window.location.reload());
 
   // ── Load contact + existing properties ──
   useEffect(() => {
@@ -310,6 +345,70 @@ export default function ImoveisPage() {
     setToasts(t => [...t, { id, type, message }]);
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 4000);
   }, []);
+
+  // Push a dummy history state on mount so we can intercept the back button
+  useEffect(() => {
+    window.history.pushState({ blocked: true }, '', window.location.href);
+    historyDepthRef.current = 1;
+  }, []);
+
+  // Native dialog for browser refresh button / tab close (browser won't allow custom popup here)
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      e.preventDefault();
+      e.returnValue = 'Você tem alterações não salvas.';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedChanges]);
+
+  // Keyboard refresh (F5, Ctrl+R, Cmd+R) → custom modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!hasUnsavedChanges) return;
+      const isRefresh =
+        e.key === 'F5' ||
+        ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R'));
+      if (isRefresh) {
+        e.preventDefault();
+        leaveActionRef.current = () => window.location.reload();
+        setShowUnsavedModal(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [hasUnsavedChanges]);
+
+  // Back button → custom modal via popstate + History API
+  useEffect(() => {
+    const handler = () => {
+      if (hasUnsavedChanges) {
+        window.history.pushState({ blocked: true }, '', window.location.href);
+        historyDepthRef.current += 1;
+        leaveActionRef.current = () => window.history.go(-(historyDepthRef.current));
+        setShowUnsavedModal(true);
+      } else {
+        historyDepthRef.current = Math.max(0, historyDepthRef.current - 1);
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [hasUnsavedChanges]);
+
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
+    try {
+      const dirtyIndices = properties
+        .map((p, i) => ({ p, i }))
+        .filter(({ p }) => p.isDirty)
+        .map(({ i }) => i);
+      await Promise.all(dirtyIndices.map(i => saveProperty(i)));
+      setShowUnsavedModal(false);
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
 
   const updateProperty = (index: number, data: PropertyData) => {
     setProperties(ps => ps.map((p, i) => {
@@ -546,6 +645,19 @@ window.location.href = 'https://wa.me/5511966583506?text=' + encodeURIComponent(
           <div key={t.id} className={`toast ${t.type}`}>{t.message}</div>
         ))}
       </div>
+
+      {/* Unsaved changes modal */}
+      {showUnsavedModal && (
+        <UnsavedChangesModal
+          onSave={handleSaveAll}
+          onLeave={() => {
+            setShowUnsavedModal(false);
+            leaveActionRef.current();
+          }}
+          onClose={() => setShowUnsavedModal(false)}
+          isSaving={isSavingAll}
+        />
+      )}
     </>
   );
 }
