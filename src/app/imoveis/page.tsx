@@ -405,6 +405,10 @@ export default function ImoveisPage() {
         .map(({ i }) => i);
       await Promise.all(dirtyIndices.map(i => saveProperty(i)));
       setShowUnsavedModal(false);
+      addToast('success', 'Informações salvas! Redirecionando para o WhatsApp...');
+      setTimeout(() => {
+        window.location.href = 'https://wa.me/5511966583506?text=' + encodeURIComponent('Olá! Acabei de atualizar os dados dos meus imóveis no cadastro. Obrigado');
+      }, 1500);
     } finally {
       setIsSavingAll(false);
     }
